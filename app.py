@@ -590,7 +590,7 @@ st.markdown(
         padding: 1.2rem 1.35rem .8rem;
         border: 1px solid var(--wasabi-line);
         border-radius: 18px;
-        background: rgba(255, 255, 252, .9);
+        background: #fff !important;
         box-shadow: 0 8px 26px rgba(48, 62, 42, .045);
     }
     div[data-testid="stForm"] h4 {
@@ -601,6 +601,11 @@ st.markdown(
     div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
         border-color: #d7ddce;
         border-radius: 10px;
+        background-color: #fff !important;
+    }
+    div[data-testid="stTextInput"] [data-baseweb="input"],
+    div[data-testid="stTextInput"] [data-baseweb="base-input"],
+    div[data-testid="stTextInput"] input {
         background-color: #fff !important;
     }
     div[data-testid="stTextInput"] input,
@@ -646,6 +651,19 @@ st.markdown(
     }
     div[data-testid="stForm"] button[kind="secondary"] p { color: var(--wasabi-ink) !important; }
     div[data-testid="stForm"] button[kind="secondary"]:hover p { color: #1c2d20 !important; }
+    div[data-testid="stDialog"] [role="dialog"] {
+        border: 1px solid var(--wasabi-line) !important;
+        border-radius: 18px !important;
+        background: var(--wasabi-paper) !important;
+        color: var(--wasabi-ink) !important;
+    }
+    div[data-testid="stDialog"] [role="dialog"] [data-testid="stMarkdownContainer"],
+    div[data-testid="stDialog"] [role="dialog"] h1,
+    div[data-testid="stDialog"] [role="dialog"] h2,
+    div[data-testid="stDialog"] [role="dialog"] h3 {
+        color: var(--wasabi-ink) !important;
+        -webkit-text-fill-color: var(--wasabi-ink) !important;
+    }
     h3 { color: var(--wasabi-ink); }
     div[data-testid="stSelectbox"] label,
     div[data-testid="stTextInput"] label { color: #526553; }
