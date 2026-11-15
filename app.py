@@ -359,7 +359,7 @@ def show_ingredient_details(ingredient: dict[str, str]) -> None:
                     st.warning(f"**{label}**\n\n{value}")
 
         with calories_tab:
-            st.caption("食品データに記載されたカロリー・三大栄養素です。")
+            st.caption("１００グラムあたりのカロリー・PFCバランスです。")
             calorie_fields = (
                 ("カロリー", "カロリー(kcal)", "kcal"),
                 ("タンパク質", "タンパク質(g)", "g"),
