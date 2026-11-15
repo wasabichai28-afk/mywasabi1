@@ -525,6 +525,7 @@ st.markdown(
             var(--wasabi-paper);
         color: var(--wasabi-ink);
         --text-color: var(--wasabi-ink);
+        color-scheme: light;
     }
     [data-testid="stHeader"] { background: rgba(247, 246, 239, 0.9); }
     [data-testid="collapsedControl"] { display: none; }
@@ -605,8 +606,20 @@ st.markdown(
     }
     div[data-testid="stTextInput"] [data-baseweb="input"],
     div[data-testid="stTextInput"] [data-baseweb="base-input"],
-    div[data-testid="stTextInput"] input {
-        background-color: #fff !important;
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stTextInput"] input:active,
+    div[data-testid="stSelectbox"] [data-baseweb="select"],
+    div[data-testid="stSelectbox"] [data-baseweb="select"] * {
+        background: #fff !important;
+        color-scheme: light;
+    }
+    div[data-testid="stTextInput"] input:-webkit-autofill,
+    div[data-testid="stTextInput"] input:-webkit-autofill:hover,
+    div[data-testid="stTextInput"] input:-webkit-autofill:focus,
+    div[data-testid="stTextInput"] input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+        -webkit-text-fill-color: #263a2d !important;
     }
     div[data-testid="stTextInput"] input,
     div[data-testid="stTextInput"] input::placeholder,
@@ -624,8 +637,10 @@ st.markdown(
         -webkit-text-fill-color: #6a7569 !important;
         opacity: 1;
     }
+    [data-baseweb="popover"],
     [data-baseweb="popover"] [role="listbox"] {
         background: #fff !important;
+        color-scheme: light;
     }
     [data-baseweb="popover"] [role="option"]:hover,
     [data-baseweb="popover"] [role="option"][aria-selected="true"] {
