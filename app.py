@@ -25,7 +25,7 @@ def resolve_data_file(filename: str) -> Path:
     return path
 
 
-DATA_PATH = resolve_data_file("総データ - oll.csv")
+DATA_PATH = resolve_data_file("総データ_oll.csv")
 WELLNESS_LIST_PATH = resolve_data_file("プチ養生 - プチ養生一覧.csv")
 SYMPTOM_ADVICE_PATH = resolve_data_file("プチ養生 - 症状別おすすめ養生.csv")
 RECIPE_PATH = resolve_data_file("プチ養生 - レシピ.csv")
@@ -51,6 +51,15 @@ DISPLAY_FIELDS = (
     "注意点・摂取のコツ",
     "避けたほうがよい体質・証",
 )
+NUTRITION_FIELDS = (
+    "カロリー(kcal)",
+    "タンパク質(g)",
+    "脂質(g)",
+    "炭水化物(g)",
+    "数値の基準・補足",
+    "主な栄養素(100gあたり)",
+    "栄養学で期待される効果・効能",
+)
 
 
 @st.cache_data
@@ -61,7 +70,8 @@ def load_ingredients() -> list[dict[str, str]]:
     with DATA_PATH.open(encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
         required_fields = set(DISPLAY_FIELDS + SEARCH_FIELDS + ("食材ID",))
-        if not reader.fieldnames or not required_fields.issubset(reader.fieldnames):
+        required_columns = required_fields | set(NUTRITION_FIELDS)
+        if not reader.fieldnames or not required_columns.issubset(reader.fieldnames):
             raise ValueError("CSVの列名が想定と異なります。食材データの形式を確認してください。")
         ingredients = [dict(row) for row in reader]
 
@@ -317,30 +327,69 @@ def close_search_results_dialog() -> None:
 
 
 def show_ingredient_details(ingredient: dict[str, str]) -> None:
-    st.markdown(f"### {ingredient['食材名']}")
-    st.write(ingredient["一般的な効能"])
-    st.caption(
-        f"五性：{ingredient['五性']}　｜　五味：{ingredient['五味']}　｜　帰経：{ingredient['帰経']}"
-    )
+    with st.container(border=True):
+        st.markdown(f"### {ingredient['食材名']}")
+        eastern_tab, calories_tab, nutrition_tab = st.tabs(
+            ["東洋医学・薬膳", "カロリー", "栄養学"]
+        )
 
-    for label, key in (
-        ("薬膳のはたらき", "薬膳効能・作用"),
-        ("おすすめの体調", "おすすめの症状・不調"),
-        ("相性のよい組み合わせ", "おすすめの組み合わせ・スパイス"),
-        ("料理例", "備考・料理例"),
-    ):
-        value = ingredient.get(key, "").strip()
-        if value:
-            st.markdown(f"**{label}**")
-            st.write(value)
+        with eastern_tab:
+            st.write(ingredient["一般的な効能"])
+            st.caption(
+                f"五性：{ingredient['五性']}　｜　五味：{ingredient['五味']}　｜　帰経：{ingredient['帰経']}"
+            )
 
-    for label, key in (
-        ("気をつけたいこと", "注意点・摂取のコツ"),
-        ("控えめにしたい体質", "避けたほうがよい体質・証"),
-    ):
-        value = ingredient.get(key, "").strip()
-        if value:
-            st.warning(f"**{label}**\n\n{value}")
+            for label, key in (
+                ("薬膳のはたらき", "薬膳効能・作用"),
+                ("おすすめの体調", "おすすめの症状・不調"),
+                ("相性のよい組み合わせ", "おすすめの組み合わせ・スパイス"),
+                ("料理例", "備考・料理例"),
+            ):
+                value = ingredient.get(key, "").strip()
+                if value:
+                    st.markdown(f"**{label}**")
+                    st.write(value)
+
+            for label, key in (
+                ("気をつけたいこと", "注意点・摂取のコツ"),
+                ("控えめにしたい体質", "避けたほうがよい体質・証"),
+            ):
+                value = ingredient.get(key, "").strip()
+                if value:
+                    st.warning(f"**{label}**\n\n{value}")
+
+        with calories_tab:
+            st.caption("食品データに記載されたカロリー・三大栄養素です。")
+            calorie_fields = (
+                ("カロリー", "カロリー(kcal)", "kcal"),
+                ("タンパク質", "タンパク質(g)", "g"),
+                ("脂質", "脂質(g)", "g"),
+                ("炭水化物", "炭水化物(g)", "g"),
+            )
+            metric_columns = st.columns(len(calorie_fields))
+            for column, (label, key, unit) in zip(metric_columns, calorie_fields):
+                value = ingredient.get(key, "").strip()
+                column.metric(
+                    label,
+                    f"{value} {unit}" if value else "記載なし",
+                )
+            basis = ingredient.get("数値の基準・補足", "").strip()
+            if basis:
+                st.caption(f"基準・補足：{basis}")
+
+        with nutrition_tab:
+            for label, key in (
+                ("一般的な効能", "一般的な効能"),
+                ("主な栄養素（100gあたり）", "主な栄養素(100gあたり)"),
+                ("栄養学で期待される効果", "栄養学で期待される効果・効能"),
+            ):
+                value = ingredient.get(key, "").strip()
+                if value:
+                    st.markdown(f"**{label}**")
+                    st.write(value)
+            st.caption(
+                "栄養素や期待される効果は一般的な情報であり、診断・治療の代わりにはなりません。"
+            )
 
 
 @st.dialog("食材の詳細")
