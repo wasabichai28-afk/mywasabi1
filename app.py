@@ -327,7 +327,7 @@ def close_search_results_dialog() -> None:
 
 
 def show_ingredient_details(ingredient: dict[str, str]) -> None:
-    with st.container(border=True):
+    with st.container(border=True, key="ingredient-detail-card"):
         st.markdown(f"### {ingredient['食材名']}")
         eastern_tab, calories_tab, nutrition_tab = st.tabs(
             ["東洋医学・薬膳", "カロリー", "栄養学"]
@@ -657,6 +657,30 @@ st.markdown(
         line-height: 1.75;
         overflow-wrap: anywhere;
     }
+    .st-key-ingredient-detail-card {
+        padding: 1rem;
+        border: 1px solid #c7d8bd !important;
+        border-radius: 18px !important;
+        background: #e8f2e3 !important;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-ingredient-detail-card) {
+        border: 1px solid #c7d8bd !important;
+        border-radius: 18px !important;
+        background: #e8f2e3 !important;
+    }
+    .st-key-ingredient-detail-card [data-testid="stMarkdownContainer"],
+    .st-key-ingredient-detail-card [data-testid="stCaptionContainer"],
+    .st-key-ingredient-detail-card [data-testid="stMetricLabel"],
+    .st-key-ingredient-detail-card [data-testid="stMetricValue"] {
+        color: #111 !important;
+        -webkit-text-fill-color: #111 !important;
+    }
+    .st-key-ingredient-detail-card strong {
+        color: #111 !important;
+        font-size: 1.02em;
+        font-weight: 800;
+        -webkit-text-fill-color: #111 !important;
+    }
     .st-key-ingredient-results button[kind="secondary"] {
         background: transparent !important;
         color: #42634a !important;
@@ -726,6 +750,10 @@ st.markdown(
         }
         .brand-header h1 {
             font-size: 1.45rem;
+        }
+        .st-key-ingredient-detail-card {
+            padding: .8rem;
+            border-radius: 15px !important;
         }
         div[data-testid="stTabs"] [role="tablist"] {
             flex-wrap: nowrap;
