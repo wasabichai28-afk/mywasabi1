@@ -682,22 +682,25 @@ st.markdown(
         -webkit-text-fill-color: #111 !important;
     }
     .st-key-ingredient-results button[kind="secondary"] {
-        background: transparent !important;
-        color: #42634a !important;
-        border: none !important;
+        background: #e8f2e3 !important;
+        color: #111 !important;
+        border: 1px solid #c7d8bd !important;
+        border-radius: 12px !important;
         justify-content: flex-start;
-        padding: 0.25rem 0;
-        box-shadow: none !important;
+        min-height: 3rem;
+        padding: .6rem .8rem !important;
+        box-shadow: 0 2px 8px rgba(48, 62, 42, .05) !important;
         cursor: pointer;
     }
     .st-key-ingredient-results button[kind="secondary"] p {
-        color: #42634a !important;
-        text-decoration: underline;
-        text-underline-offset: 0.15em;
-        font-weight: 600;
+        color: #111 !important;
+        -webkit-text-fill-color: #111 !important;
+        text-decoration: none;
+        font-weight: 700;
     }
     .st-key-ingredient-results button[kind="secondary"]:hover p {
-        color: #263a2d !important;
+        color: #111 !important;
+        -webkit-text-fill-color: #111 !important;
     }
     .st-key-ingredient-results button[kind="secondary"]:focus-visible {
         outline: 2px solid #73885b !important;
@@ -792,15 +795,7 @@ st.markdown(
             min-width: 100% !important;
         }
         .st-key-ingredient-results button[kind="secondary"] {
-            min-height: 3rem;
             padding: .45rem .8rem !important;
-            border: 1px solid #e1e6d9 !important;
-            border-radius: 12px !important;
-            background: #fff !important;
-            box-shadow: 0 2px 8px rgba(48, 62, 42, .05) !important;
-        }
-        .st-key-ingredient-results button[kind="secondary"] p {
-            text-decoration: none;
         }
         .st-key-calorie-metrics [data-testid="stHorizontalBlock"] {
             flex-wrap: wrap;
