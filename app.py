@@ -787,7 +787,18 @@ st.markdown(
             padding: .7rem;
             border: 1px solid var(--wasabi-line);
             border-radius: 12px;
-            background: rgba(255, 255, 252, .9);
+            background: #fff !important;
+        }
+        .st-key-calorie-metrics [data-testid="stMetricValue"],
+        .st-key-calorie-metrics [data-testid="stMetricValue"] *,
+        .st-key-calorie-metrics [data-testid="stMetricLabel"],
+        .st-key-calorie-metrics [data-testid="stMetricLabel"] * {
+            color: var(--wasabi-ink) !important;
+            -webkit-text-fill-color: var(--wasabi-ink) !important;
+        }
+        .st-key-calorie-metrics [data-testid="stMetricValue"] {
+            font-size: 1.35rem;
+            font-weight: 700;
         }
         .st-key-wellness-filters [data-testid="stHorizontalBlock"] {
             flex-wrap: wrap;
