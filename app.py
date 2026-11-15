@@ -366,13 +366,14 @@ def show_ingredient_details(ingredient: dict[str, str]) -> None:
                 ("脂質", "脂質(g)", "g"),
                 ("炭水化物", "炭水化物(g)", "g"),
             )
-            metric_columns = st.columns(len(calorie_fields))
-            for column, (label, key, unit) in zip(metric_columns, calorie_fields):
-                value = ingredient.get(key, "").strip()
-                column.metric(
-                    label,
-                    f"{value} {unit}" if value else "記載なし",
-                )
+            with st.container(key="calorie-metrics"):
+                metric_columns = st.columns(len(calorie_fields))
+                for column, (label, key, unit) in zip(metric_columns, calorie_fields):
+                    value = ingredient.get(key, "").strip()
+                    column.metric(
+                        label,
+                        f"{value} {unit}" if value else "記載なし",
+                    )
             basis = ingredient.get("数値の基準・補足", "").strip()
             if basis:
                 st.caption(f"基準・補足：{basis}")
@@ -527,7 +528,11 @@ st.markdown(
     }
     [data-testid="stHeader"] { background: rgba(247, 246, 239, 0.9); }
     [data-testid="collapsedControl"] { display: none; }
-    section.main > div { max-width: 1120px; }
+    section.main > div {
+        max-width: 1120px;
+        padding-top: .75rem;
+        padding-bottom: 2rem;
+    }
     div[data-testid="stTabs"] button[data-baseweb="tab"] {
         border-radius: 10px 10px 0 0;
         font-weight: 600;
@@ -648,6 +653,10 @@ st.markdown(
         color: #657365;
         line-height: 1.7;
     }
+    .stMarkdown p {
+        line-height: 1.75;
+        overflow-wrap: anywhere;
+    }
     .st-key-ingredient-results button[kind="secondary"] {
         background: transparent !important;
         color: #42634a !important;
@@ -708,39 +717,105 @@ st.markdown(
     }
     @media (max-width: 560px) {
         section.main > div {
-            padding-left: 0.8rem;
-            padding-right: 0.8rem;
+            padding: .4rem .7rem 1.5rem;
         }
         .brand-header {
-            padding: 1.3rem 1.1rem;
+            margin: .2rem 0 1rem;
+            padding: 1.15rem 1rem;
             border-radius: 14px;
         }
         .brand-header h1 {
-            font-size: 1.55rem;
+            font-size: 1.45rem;
         }
         div[data-testid="stTabs"] [role="tablist"] {
-            flex-wrap: wrap;
-            gap: 0.25rem;
+            flex-wrap: nowrap;
+            gap: .3rem;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: thin;
         }
         div[data-testid="stTabs"] button[data-baseweb="tab"] {
-            flex: 1 1 30%;
-            min-width: 0;
+            flex: 0 0 auto;
+            min-width: max-content;
             height: auto;
-            min-height: 3rem;
-            padding: 0.45rem 0.3rem;
-            white-space: normal;
+            min-height: 2.8rem;
+            padding: .5rem .75rem;
+            white-space: nowrap;
+            font-size: .86rem;
+        }
+        div[data-testid="stForm"] {
+            padding: 1rem .85rem .7rem;
+            border-radius: 15px;
+        }
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            min-height: 2.8rem;
+            font-size: 16px;
+        }
+        div[data-testid="stForm"] button,
+        [data-testid="stDialog"] button {
+            min-height: 2.8rem;
+        }
+        .st-key-ingredient-results [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap;
         }
         .st-key-ingredient-results [data-testid="stColumn"] {
-            flex: 1 1 45% !important;
-            min-width: 45% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+        .st-key-ingredient-results button[kind="secondary"] {
+            min-height: 3rem;
+            padding: .45rem .8rem !important;
+            border: 1px solid #e1e6d9 !important;
+            border-radius: 12px !important;
+            background: #fff !important;
+            box-shadow: 0 2px 8px rgba(48, 62, 42, .05) !important;
+        }
+        .st-key-ingredient-results button[kind="secondary"] p {
+            text-decoration: none;
+        }
+        .st-key-calorie-metrics [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+        .st-key-calorie-metrics [data-testid="stColumn"] {
+            flex: 1 1 calc(50% - .5rem) !important;
+            min-width: calc(50% - .5rem) !important;
+        }
+        .st-key-calorie-metrics [data-testid="stMetric"] {
+            min-height: 5.2rem;
+            padding: .7rem;
+            border: 1px solid var(--wasabi-line);
+            border-radius: 12px;
+            background: rgba(255, 255, 252, .9);
+        }
+        .st-key-wellness-filters [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap;
+        }
+        .st-key-wellness-filters [data-testid="stColumn"] {
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
         }
         .st-key-advice-food-links [data-testid="stHorizontalBlock"] {
             flex-wrap: wrap;
-            gap: 0.3rem;
+            gap: .35rem;
         }
         .st-key-advice-food-links [data-testid="stColumn"] {
             flex: 1 1 45% !important;
             min-width: 45% !important;
+        }
+        .st-key-advice-food-links button {
+            min-height: 2.8rem;
+            padding: .35rem .25rem !important;
+        }
+        div[data-testid="stExpander"] {
+            border-radius: 13px;
+            background: rgba(255, 255, 252, .72);
+        }
+        div[data-testid="stDialog"] [role="dialog"] {
+            width: calc(100vw - 1rem);
+            max-width: calc(100vw - 1rem);
+            border-radius: 16px;
         }
     }
     </style>
@@ -813,7 +888,7 @@ with search_tab:
             key="query_input",
         )
         st.caption("食材名・別名のみを検索します。")
-        search_col, clear_col, _ = st.columns([2, 2, 5])
+        search_col, clear_col = st.columns(2)
         with search_col:
             search_submitted = st.form_submit_button(
                 "検索する", type="primary", use_container_width=True
@@ -991,21 +1066,22 @@ with wellness_tab:
             show_ingredient_dialog(clicked_recommended_ingredient)
 
     st.markdown("#### プチ養生一覧")
-    list_col, season_col = st.columns(2)
-    with list_col:
-        selected_wellness_category = st.selectbox(
-            "テーマ",
-            ["すべて", *sorted({entry["分類"] for entry in wellness_entries})],
-            key="wellness_category_filter",
-        )
-    with season_col:
-        selected_season = st.selectbox(
-            "季節",
-            ["すべて", *sorted(
-                {entry["対象季節"] for entry in wellness_entries if entry["対象季節"] != "通年"}
-            ), "通年"],
-            key="wellness_season_filter",
-        )
+    with st.container(key="wellness-filters"):
+        list_col, season_col = st.columns(2)
+        with list_col:
+            selected_wellness_category = st.selectbox(
+                "テーマ",
+                ["すべて", *sorted({entry["分類"] for entry in wellness_entries})],
+                key="wellness_category_filter",
+            )
+        with season_col:
+            selected_season = st.selectbox(
+                "季節",
+                ["すべて", *sorted(
+                    {entry["対象季節"] for entry in wellness_entries if entry["対象季節"] != "通年"}
+                ), "通年"],
+                key="wellness_season_filter",
+            )
     wellness_query = st.text_input(
         "悩み・体質から探す",
         placeholder="例：乾燥、冷え、眠り",
