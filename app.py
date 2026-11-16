@@ -1212,39 +1212,36 @@ with recipe_tab:
     st.markdown("### 🍲 薬膳レシピ")
     st.write("体調に合わせて選びやすい、薬膳の考え方を取り入れた簡単レシピです。")
 
-    recipe_categories = [
-        "すべて",
-        *sorted({entry["分類"] for entry in recipe_entries}),
-    ]
+    recipe_categories = sorted({entry["分類"] for entry in recipe_entries})
     if st.session_state.get("recipe_category_filter") not in recipe_categories:
-        st.session_state["recipe_category_filter"] = "すべて"
+        st.session_state["recipe_category_filter"] = ""
 
     st.markdown("#### 分類を選ぶ")
     with st.container(key="recipe-category-buttons"):
-        for row_start in range(0, len(recipe_categories), 3):
-            columns = st.columns(3)
-            for column_index, category in enumerate(
-                recipe_categories[row_start : row_start + 3]
-            ):
-                with columns[column_index]:
-                    if st.button(
-                        category,
-                        key=f"recipe-category-{row_start + column_index}",
-                        type=(
-                            "primary"
-                            if category == st.session_state["recipe_category_filter"]
-                            else "secondary"
-                        ),
-                    ):
-                        st.session_state["recipe_category_filter"] = category
+        columns = st.columns([len(category) for category in recipe_categories])
+        for index, (column, category) in enumerate(zip(columns, recipe_categories)):
+            with column:
+                if st.button(
+                    category,
+                    key=f"recipe-category-{index}",
+                    type=(
+                        "primary"
+                        if category == st.session_state["recipe_category_filter"]
+                        else "secondary"
+                    ),
+                ):
+                    st.session_state["recipe_category_filter"] = category
 
     recipe_category = st.session_state["recipe_category_filter"]
     filtered_recipes = [
         entry for entry in recipe_entries
-        if (recipe_category == "すべて" or entry["分類"] == recipe_category)
+        if entry["分類"] == recipe_category
     ]
-    st.caption(f"表示：{len(filtered_recipes)}件")
-    if not filtered_recipes:
+    if not recipe_category:
+        st.info("分類を選ぶと、該当するレシピが表示されます。")
+    else:
+        st.caption(f"表示：{len(filtered_recipes)}件")
+    if recipe_category and not filtered_recipes:
         st.info("この分類にレシピがありません。別の分類を選んでください。")
     for entry in filtered_recipes:
         with st.expander(f"{entry['レシピ名']}　·　{entry['分類']}"):
