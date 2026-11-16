@@ -1196,24 +1196,13 @@ with recipe_tab:
         ["すべて", *sorted({entry["分類"] for entry in recipe_entries})],
         key="recipe_category_filter",
     )
-    recipe_query = st.text_input(
-        "悩みや症状から探す",
-        placeholder="例：冷え、疲れ、胃腸",
-        key="recipe_query",
-    ).strip().casefold()
     filtered_recipes = [
         entry for entry in recipe_entries
         if (recipe_category == "すべて" or entry["分類"] == recipe_category)
-        and (
-            not recipe_query
-            or recipe_query in entry["レシピ名"].casefold()
-            or recipe_query in entry["主な効能"].casefold()
-            or recipe_query in entry["この症状で悩んでいる人におすすめ！"].casefold()
-        )
     ]
     st.caption(f"表示：{len(filtered_recipes)}件")
     if not filtered_recipes:
-        st.info("条件に合うレシピがありません。絞り込み条件や検索語を変えてください。")
+        st.info("この分類にレシピがありません。別の分類を選んでください。")
     for entry in filtered_recipes:
         with st.expander(f"{entry['レシピ名']}　·　{entry['分類']}"):
             st.markdown(
