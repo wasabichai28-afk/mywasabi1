@@ -1134,54 +1134,6 @@ daily_wellness = next(
     entry for entry in wellness_entries
     if entry["ID"] == st.session_state["daily_wellness_id"]
 )
-if not (WELLNESS_PAGE or RECIPE_PAGE or SYMPTOM_PAGE):
-    clicked_daily_ingredient = None
-    with st.container(border=True):
-        with st.container(key="daily-wellness-heading"):
-            title_col, shuffle_col = st.columns(2)
-            with title_col:
-                st.markdown("#### 今日のプチ養生")
-            with shuffle_col:
-                if st.button("シャッフル", key="shuffle_daily_wellness"):
-                    alternatives = [
-                        entry for entry in wellness_entries
-                        if entry["ID"] != daily_wellness["ID"]
-                    ]
-                    if alternatives:
-                        daily_wellness = random.choice(alternatives)
-                        st.session_state["daily_wellness_id"] = daily_wellness["ID"]
-
-        st.markdown(f"**{daily_wellness['タイトル']}**")
-        st.write(daily_wellness["アドバイス本文"])
-        st.markdown("**おすすめの食材：**")
-        recommendations = [
-            item.strip()
-            for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
-            if item.strip()
-        ]
-        with st.container(key="daily-wellness-food-links"):
-            for row_start in range(0, len(recommendations), 4):
-                columns = st.columns(4)
-                for column_index, recommendation in enumerate(
-                    recommendations[row_start : row_start + 4]
-                ):
-                    with columns[column_index]:
-                        index = row_start + column_index
-                        ingredient = find_recommended_ingredient(recommendation, ingredients)
-                        if ingredient:
-                            if st.button(
-                                recommendation,
-                                key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
-                                type="secondary",
-                                help="クリックして食材の詳細を表示",
-                            ):
-                                clicked_daily_ingredient = ingredient
-                        else:
-                            st.caption(f"{recommendation}（詳細なし）")
-        st.caption(daily_wellness["ポイント・コツ"])
-
-    if clicked_daily_ingredient:
-        show_ingredient_dialog(clicked_daily_ingredient)
 
 categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
 if SYMPTOM_PAGE:
@@ -1504,6 +1456,56 @@ with wellness_tab:
     st.markdown("### 🌿 養生・薬膳のヒント")
     st.write("毎日の暮らしに取り入れやすい、東洋医学と薬膳の基本をまとめました。")
 
+    clicked_daily_ingredient = None
+    with st.container(border=True):
+        with st.container(key="daily-wellness-heading"):
+            title_col, shuffle_col = st.columns(2)
+            with title_col:
+                st.markdown("#### 今日のプチ養生")
+            with shuffle_col:
+                if st.button("シャッフル", key="shuffle_daily_wellness"):
+                    alternatives = [
+                        entry for entry in wellness_entries
+                        if entry["ID"] != daily_wellness["ID"]
+                    ]
+                    if alternatives:
+                        daily_wellness = random.choice(alternatives)
+                        st.session_state["daily_wellness_id"] = daily_wellness["ID"]
+
+        st.markdown(f"**{daily_wellness['タイトル']}**")
+        st.write(daily_wellness["アドバイス本文"])
+        st.markdown("**おすすめの食材：**")
+        recommendations = [
+            item.strip()
+            for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
+            if item.strip()
+        ]
+        with st.container(key="daily-wellness-food-links"):
+            for row_start in range(0, len(recommendations), 4):
+                columns = st.columns(4)
+                for column_index, recommendation in enumerate(
+                    recommendations[row_start : row_start + 4]
+                ):
+                    with columns[column_index]:
+                        index = row_start + column_index
+                        ingredient = find_recommended_ingredient(
+                            recommendation, ingredients
+                        )
+                        if ingredient:
+                            if st.button(
+                                recommendation,
+                                key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
+                                type="secondary",
+                                help="クリックして食材の詳細を表示",
+                            ):
+                                clicked_daily_ingredient = ingredient
+                        else:
+                            st.caption(f"{recommendation}（詳細なし）")
+        st.caption(daily_wellness["ポイント・コツ"])
+
+    if clicked_daily_ingredient:
+        show_ingredient_dialog(clicked_daily_ingredient)
+
     current_season = {
         3: "春", 4: "春", 5: "春",
         6: "梅雨", 7: "夏", 8: "夏",
@@ -1575,33 +1577,6 @@ with wellness_tab:
                 st.markdown(f"**対象の悩み・体質：** {entry['対象の悩み・体質']}")
                 st.markdown(f"**おすすめの食材：** {entry['おすすめの食材']}")
                 st.markdown(f"**ポイント・コツ：** {entry['ポイント・コツ']}")
-
-    st.markdown("#### 東洋医学のミニ知識")
-    with st.expander("気・血・津液（しんえき）って？"):
-        st.write(
-            "東洋医学では、からだを支えるはたらきを「気」、栄養を運ぶものを「血」、"
-            "血以外の水分を「津液」と表現します。体調を理解するための伝統的な考え方で、"
-            "現代医学の診断用語とは異なります。"
-        )
-    with st.expander("五性（ごせい）と五味（ごみ）"):
-        st.write(
-            "五性は食材の性質を寒・涼・平・温・熱に分ける考え方、五味は酸・苦・甘・辛・鹹"
-            "（しおからい）の味の分類です。食材詳細の表示は、提供されたデータに基づいています。"
-        )
-    with st.expander("薬膳は特別な料理が必要？"):
-        st.write(
-            "薬膳は、季節や日々の体調を意識して食材を選ぶ食養生の考え方です。"
-            "身近な食材を使い、無理なく続けられる食事を大切にします。"
-        )
-
-    st.markdown("#### 毎日のプチ養生")
-    tip_col1, tip_col2 = st.columns(2)
-    with tip_col1:
-        st.markdown("**食事**")
-        st.write("旬の食材を取り入れ、よく噛んで、無理のない量を楽しみましょう。")
-    with tip_col2:
-        st.markdown("**休息**")
-        st.write("睡眠や休憩のリズムを整え、体調に合わせて頑張りすぎないことも大切です。")
 
     st.divider()
     st.caption(
