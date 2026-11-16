@@ -1,4 +1,5 @@
 import csv
+import random
 import re
 import unicodedata
 from datetime import date
@@ -950,11 +951,40 @@ st.markdown(
     <header class="brand-header">
       <div class="brand-eyebrow">WASABI · FOOD &amp; WELLNESS</div>
       <h1>わさびの薬膳辞書</h1>
-      <p>季節と体調に寄り添う、食材選びの小さな手引き。</p>
     </header>
     """,
     unsafe_allow_html=True,
 )
+
+wellness_ids = {entry["ID"] for entry in wellness_entries}
+if st.session_state.get("daily_wellness_id") not in wellness_ids:
+    st.session_state["daily_wellness_id"] = random.choice(wellness_entries)["ID"]
+
+daily_wellness = next(
+    entry for entry in wellness_entries
+    if entry["ID"] == st.session_state["daily_wellness_id"]
+)
+with st.container(border=True):
+    title_col, shuffle_col = st.columns([5, 1])
+    with title_col:
+        st.markdown("#### 今日のプチ養生")
+    with shuffle_col:
+        if st.button(
+            "シャッフル", key="shuffle_daily_wellness", use_container_width=True
+        ):
+            alternatives = [
+                entry for entry in wellness_entries
+                if entry["ID"] != daily_wellness["ID"]
+            ]
+            if alternatives:
+                daily_wellness = random.choice(alternatives)
+                st.session_state["daily_wellness_id"] = daily_wellness["ID"]
+
+    st.markdown(f"**{daily_wellness['タイトル']}**")
+    st.write(daily_wellness["アドバイス本文"])
+    st.markdown(f"**おすすめの食材：** {daily_wellness['おすすめの食材']}")
+    st.caption(daily_wellness["ポイント・コツ"])
+
 categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
 if SYMPTOM_PAGE:
     symptom_tab, wellness_tab, recipe_tab, search_tab = st.tabs([
@@ -1184,7 +1214,7 @@ with wellness_tab:
 
     current_season = {
         3: "春", 4: "春", 5: "春",
-        6: "夏", 7: "夏", 8: "夏",
+        6: "梅雨", 7: "夏", 8: "夏",
         9: "秋", 10: "秋", 11: "秋",
         12: "冬", 1: "冬", 2: "冬",
     }[date.today().month]
