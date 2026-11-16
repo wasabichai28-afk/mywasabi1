@@ -745,8 +745,13 @@ st.markdown(
         align-items: center;
     }
     .st-key-symptom-picker [data-baseweb="select"] [class*="singleValue"] {
-        position: static !important;
-        max-width: 100% !important;
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        transform: none !important;
+        box-sizing: border-box;
+        max-width: calc(100% - 1rem) !important;
+        padding-left: .35rem;
         white-space: normal !important;
         overflow: visible !important;
         text-overflow: clip !important;
