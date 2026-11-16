@@ -383,6 +383,7 @@ def show_ingredient_details(ingredient: dict[str, str]) -> None:
                 ("一般的な効能", "一般的な効能"),
                 ("主な栄養素（100gあたり）", "主な栄養素(100gあたり)"),
                 ("栄養学で期待される効果", "栄養学で期待される効果・効能"),
+                ("注意点・摂取のコツ", "注意点・摂取のコツ"),
             ):
                 value = ingredient.get(key, "").strip()
                 if value:
@@ -549,6 +550,36 @@ st.markdown(
         color: #fff !important;
         -webkit-text-fill-color: #fff !important;
         background-color: var(--wasabi-green) !important;
+    }
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"] {
+        border: 1px solid #e4e6d9 !important;
+        border-radius: 10px !important;
+    }
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2),
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2) * {
+        color: #854b5d !important;
+        -webkit-text-fill-color: #854b5d !important;
+        background-color: #fff1f4 !important;
+    }
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2)[aria-selected="true"],
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2)[aria-selected="true"] * {
+        color: #73364b !important;
+        -webkit-text-fill-color: #73364b !important;
+        background-color: #f5d6df !important;
+        border-color: #e8bbc9 !important;
+    }
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3),
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3) * {
+        color: #42677b !important;
+        -webkit-text-fill-color: #42677b !important;
+        background-color: #eef7fc !important;
+    }
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"],
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"] * {
+        color: #315a70 !important;
+        -webkit-text-fill-color: #315a70 !important;
+        background-color: #d9edf7 !important;
+        border-color: #bfdce9 !important;
     }
     .brand-header {
         position: relative;
