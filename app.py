@@ -872,6 +872,19 @@ st.markdown(
         background: #ffed99 !important;
         border-color: #000 !important;
     }
+    .st-key-clear-search-button button {
+        color: #000 !important;
+        background: #eeeeee !important;
+        border-color: #b8b8b8 !important;
+    }
+    .st-key-clear-search-button button p {
+        color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
+    }
+    .st-key-clear-search-button button:hover {
+        background: #e2e2e2 !important;
+        border-color: #999 !important;
+    }
     .st-key-advice-food-links button[kind="secondary"]:focus-visible {
         outline: 2px solid var(--wasabi-leaf) !important;
         outline-offset: 2px;
@@ -1145,12 +1158,13 @@ with search_tab:
                 "検索する", type="primary", use_container_width=True
             )
         with clear_col:
-            st.form_submit_button(
-                "クリア",
-                type="secondary",
-                on_click=clear_search,
-                use_container_width=True,
-            )
+            with st.container(key="clear-search-button"):
+                st.form_submit_button(
+                    "クリア",
+                    type="secondary",
+                    on_click=clear_search,
+                    use_container_width=True,
+                )
 
     st.caption(
         "情報について：本サイトの内容はAIを活用して作成・整理しています。"
@@ -1296,7 +1310,6 @@ with symptom_tab:
                             st.caption(
                                 f"{recipe['分類']}・{recipe['調理時間・調理法']}"
                             )
-                            st.write(f"主な効能：{recipe['主な効能']}")
 
             st.markdown("**避けたいこと**")
             st.write(advice["避けたいこと"])
