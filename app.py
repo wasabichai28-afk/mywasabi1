@@ -45,12 +45,14 @@ DISPLAY_FIELDS = (
     "帰経",
     "一般的な効能",
     "薬膳効能・作用",
+    "相性の良い証・体調",
     "おすすめの症状・不調",
     "おすすめの組み合わせ・スパイス",
     "備考・料理例",
     "注意点・摂取のコツ",
     "避けたほうがよい体質・証",
 )
+RECIPE_FIELDS = ("食べ合わせ・摂取時の注意点",)
 NUTRITION_FIELDS = (
     "カロリー(kcal)",
     "タンパク質(g)",
@@ -70,7 +72,7 @@ def load_ingredients() -> list[dict[str, str]]:
     with DATA_PATH.open(encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
         required_fields = set(DISPLAY_FIELDS + SEARCH_FIELDS + ("食材ID",))
-        required_columns = required_fields | set(NUTRITION_FIELDS)
+        required_columns = required_fields | set(RECIPE_FIELDS) | set(NUTRITION_FIELDS)
         if not reader.fieldnames or not required_columns.issubset(reader.fieldnames):
             raise ValueError("CSVの列名が想定と異なります。食材データの形式を確認してください。")
         ingredients = [dict(row) for row in reader]
@@ -329,34 +331,48 @@ def close_search_results_dialog() -> None:
 def show_ingredient_details(ingredient: dict[str, str]) -> None:
     with st.container(border=True, key="ingredient-detail-card"):
         st.markdown(f"### {ingredient['食材名']}")
-        eastern_tab, calories_tab, nutrition_tab = st.tabs(
-            ["東洋医学・薬膳", "カロリー", "栄養学"]
+        eastern_tab, recipe_tab, calories_tab, nutrition_tab = st.tabs(
+            ["東洋医学・薬膳", "レシピ", "カロリー", "栄養学"]
         )
 
         with eastern_tab:
-            st.write(ingredient["一般的な効能"])
-            st.caption(
-                f"五性：{ingredient['五性']}　｜　五味：{ingredient['五味']}　｜　帰経：{ingredient['帰経']}"
-            )
-
             for label, key in (
-                ("薬膳のはたらき", "薬膳効能・作用"),
-                ("おすすめの体調", "おすすめの症状・不調"),
-                ("相性のよい組み合わせ", "おすすめの組み合わせ・スパイス"),
-                ("料理例", "備考・料理例"),
+                ("一般的な効能", "一般的な効能"),
+                ("薬膳効能・作用", "薬膳効能・作用"),
+                ("相性の良い証・体調", "相性の良い証・体調"),
             ):
                 value = ingredient.get(key, "").strip()
                 if value:
                     st.markdown(f"**{label}**")
                     st.write(value)
 
+            avoid = ingredient.get("避けたほうがよい体質・証", "").strip()
+            if avoid:
+                st.warning(f"**避けたほうがよい体質・証**\n\n{avoid}")
+
+            st.caption(
+                f"五味：{ingredient['五味']}　｜　五性：{ingredient['五性']}　｜　帰経：{ingredient['帰経']}"
+            )
+            st.markdown("**おすすめの症状**")
+            st.write(ingredient["おすすめの症状・不調"])
+
+        with recipe_tab:
             for label, key in (
-                ("気をつけたいこと", "注意点・摂取のコツ"),
-                ("控えめにしたい体質", "避けたほうがよい体質・証"),
+                ("注意点・摂取のコツ", "注意点・摂取のコツ"),
+                ("食べ合わせ・摂取時の注意点", "食べ合わせ・摂取時の注意点"),
             ):
                 value = ingredient.get(key, "").strip()
                 if value:
                     st.warning(f"**{label}**\n\n{value}")
+
+            for label, key in (
+                ("備考・料理例", "備考・料理例"),
+                ("おすすめの組み合わせ・スパイス", "おすすめの組み合わせ・スパイス"),
+            ):
+                value = ingredient.get(key, "").strip()
+                if value:
+                    st.markdown(f"**{label}**")
+                    st.write(value)
 
         with calories_tab:
             st.caption("１００グラムあたりのカロリー・PFCバランスです。")
@@ -383,7 +399,6 @@ def show_ingredient_details(ingredient: dict[str, str]) -> None:
                 ("一般的な効能", "一般的な効能"),
                 ("主な栄養素（100gあたり）", "主な栄養素(100gあたり)"),
                 ("栄養学で期待される効果", "栄養学で期待される効果・効能"),
-                ("注意点・摂取のコツ", "注意点・摂取のコツ"),
             ):
                 value = ingredient.get(key, "").strip()
                 if value:
@@ -555,27 +570,27 @@ st.markdown(
         border: 1px solid #e4e6d9 !important;
         border-radius: 10px !important;
     }
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2),
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2) * {
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3),
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3) * {
         color: #854b5d !important;
         -webkit-text-fill-color: #854b5d !important;
         background-color: #fff1f4 !important;
     }
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2)[aria-selected="true"],
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(2)[aria-selected="true"] * {
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"],
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"] * {
         color: #73364b !important;
         -webkit-text-fill-color: #73364b !important;
         background-color: #f5d6df !important;
         border-color: #e8bbc9 !important;
     }
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3),
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3) * {
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(4),
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(4) * {
         color: #42677b !important;
         -webkit-text-fill-color: #42677b !important;
         background-color: #eef7fc !important;
     }
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"],
-    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"] * {
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(4)[aria-selected="true"],
+    .st-key-ingredient-detail-card div[data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"]:nth-child(4)[aria-selected="true"] * {
         color: #315a70 !important;
         -webkit-text-fill-color: #315a70 !important;
         background-color: #d9edf7 !important;
