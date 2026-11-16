@@ -807,23 +807,27 @@ st.markdown(
         outline: 2px solid #73885b !important;
         outline-offset: 2px;
     }
-    .st-key-advice-food-links button[kind="secondary"] {
+    .st-key-advice-food-links button[kind="secondary"],
+    .st-key-daily-wellness-food-links button[kind="secondary"] {
         min-height: 0;
         padding: 0 !important;
         color: var(--wasabi-green) !important;
         background: transparent !important;
+        background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
         justify-content: flex-start;
     }
-    .st-key-advice-food-links button[kind="secondary"] p {
+    .st-key-advice-food-links button[kind="secondary"] p,
+    .st-key-daily-wellness-food-links button[kind="secondary"] p {
         color: var(--wasabi-green) !important;
         -webkit-text-fill-color: var(--wasabi-green) !important;
         text-decoration: underline;
         text-underline-offset: 0.15em;
         font-weight: 600;
     }
-    .st-key-advice-food-links button[kind="secondary"]:hover p {
+    .st-key-advice-food-links button[kind="secondary"]:hover p,
+    .st-key-daily-wellness-food-links button[kind="secondary"]:hover p {
         color: var(--wasabi-ink) !important;
         -webkit-text-fill-color: var(--wasabi-ink) !important;
     }
@@ -939,7 +943,8 @@ st.markdown(
             flex: 1 1 45% !important;
             min-width: 45% !important;
         }
-        .st-key-advice-food-links button {
+        .st-key-advice-food-links button,
+        .st-key-daily-wellness-food-links button {
             min-height: 2.8rem;
             padding: .35rem .25rem !important;
         }
@@ -1009,24 +1014,25 @@ with st.container(border=True):
         for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
         if item.strip()
     ]
-    for row_start in range(0, len(recommendations), 4):
-        columns = st.columns(4)
-        for column_index, recommendation in enumerate(
-            recommendations[row_start : row_start + 4]
-        ):
-            with columns[column_index]:
-                index = row_start + column_index
-                ingredient = find_recommended_ingredient(recommendation, ingredients)
-                if ingredient:
-                    if st.button(
-                        recommendation,
-                        key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
-                        type="secondary",
-                        help="クリックして食材の詳細を表示",
-                    ):
-                        clicked_daily_ingredient = ingredient
-                else:
-                    st.caption(f"{recommendation}（詳細なし）")
+    with st.container(key="daily-wellness-food-links"):
+        for row_start in range(0, len(recommendations), 4):
+            columns = st.columns(4)
+            for column_index, recommendation in enumerate(
+                recommendations[row_start : row_start + 4]
+            ):
+                with columns[column_index]:
+                    index = row_start + column_index
+                    ingredient = find_recommended_ingredient(recommendation, ingredients)
+                    if ingredient:
+                        if st.button(
+                            recommendation,
+                            key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
+                            type="secondary",
+                            help="クリックして食材の詳細を表示",
+                        ):
+                            clicked_daily_ingredient = ingredient
+                    else:
+                        st.caption(f"{recommendation}（詳細なし）")
     st.caption(daily_wellness["ポイント・コツ"])
 
 if clicked_daily_ingredient:
