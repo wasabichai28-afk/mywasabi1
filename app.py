@@ -933,22 +933,6 @@ st.markdown(
         background: #e2e2e2 !important;
         border-color: #999 !important;
     }
-    .st-key-search-navigation button {
-        min-height: 3.2rem;
-        color: var(--wasabi-ink) !important;
-        background: #edf1e5 !important;
-        border: 1px solid #cdd7c1 !important;
-        box-shadow: none !important;
-    }
-    .st-key-search-navigation button p {
-        color: var(--wasabi-ink) !important;
-        -webkit-text-fill-color: var(--wasabi-ink) !important;
-        font-weight: 600;
-    }
-    .st-key-search-navigation button:hover {
-        background: #e1e9d8 !important;
-        border-color: #aab99a !important;
-    }
     .st-key-advice-food-links button[kind="secondary"]:focus-visible {
         outline: 2px solid var(--wasabi-leaf) !important;
         outline-offset: 2px;
@@ -1181,27 +1165,6 @@ st.markdown(
 )
 
 with search_tab:
-    st.markdown("#### 別の方法で探す")
-    with st.container(key="search-navigation"):
-        symptom_col, recipe_col = st.columns(2)
-        with symptom_col:
-            st.button(
-                "症状から養生法を探す",
-                key="navigate-symptom",
-                type="secondary",
-                use_container_width=True,
-                on_click=navigate_to_page,
-                args=("symptom",),
-            )
-        with recipe_col:
-            st.button(
-                "薬膳レシピを選ぶ",
-                key="navigate-recipe",
-                type="secondary",
-                use_container_width=True,
-                on_click=navigate_to_page,
-                args=("recipe",),
-            )
     st.markdown("#### 食材をさがす")
     with st.form("ingredient_search"):
         query = st.text_input(
