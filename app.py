@@ -440,6 +440,23 @@ def show_ingredient_dialog(ingredient: dict[str, str]) -> None:
     show_ingredient_details(ingredient)
 
 
+@st.dialog("薬膳レシピ")
+def show_recipe_dialog(recipe: dict[str, str]) -> None:
+    st.markdown(f"### {recipe['レシピ名']}")
+    st.caption(f"{recipe['分類']}・{recipe['調理時間・調理法']}")
+    st.markdown(f"**主な薬膳食材：** {recipe['主な薬膳食材']}")
+    st.markdown(f"**主な効能：** {recipe['主な効能']}")
+    st.markdown("**材料**")
+    st.write(recipe["材料"])
+    st.markdown("**作り方**")
+    st.write(recipe["作り方"])
+    st.markdown(f"**ポイント：** {recipe['ポイント']}")
+    st.caption(
+        "おすすめの人："
+        f"{recipe['この症状で悩んでいる人におすすめ！']}"
+    )
+
+
 @st.dialog(
     "食材の検索結果",
     width="large",
@@ -813,7 +830,8 @@ st.markdown(
     }
     .st-key-advice-food-links button[kind="secondary"],
     .st-key-daily-wellness-food-links button[kind="secondary"],
-    .st-key-related-wellness-food-links button[kind="secondary"] {
+    .st-key-related-wellness-food-links button[kind="secondary"],
+    .st-key-advice-recipe-links button[kind="secondary"] {
         min-height: 0;
         padding: 0 !important;
         color: var(--wasabi-green) !important;
@@ -825,7 +843,8 @@ st.markdown(
     }
     .st-key-advice-food-links button[kind="secondary"] p,
     .st-key-daily-wellness-food-links button[kind="secondary"] p,
-    .st-key-related-wellness-food-links button[kind="secondary"] p {
+    .st-key-related-wellness-food-links button[kind="secondary"] p,
+    .st-key-advice-recipe-links button[kind="secondary"] p {
         color: var(--wasabi-green) !important;
         -webkit-text-fill-color: var(--wasabi-green) !important;
         text-decoration: underline;
@@ -834,7 +853,8 @@ st.markdown(
     }
     .st-key-advice-food-links button[kind="secondary"]:hover p,
     .st-key-daily-wellness-food-links button[kind="secondary"]:hover p,
-    .st-key-related-wellness-food-links button[kind="secondary"]:hover p {
+    .st-key-related-wellness-food-links button[kind="secondary"]:hover p,
+    .st-key-advice-recipe-links button[kind="secondary"]:hover p {
         color: var(--wasabi-ink) !important;
         -webkit-text-fill-color: var(--wasabi-ink) !important;
     }
@@ -966,7 +986,8 @@ st.markdown(
         }
         .st-key-advice-food-links button,
         .st-key-daily-wellness-food-links button,
-        .st-key-related-wellness-food-links button {
+        .st-key-related-wellness-food-links button,
+        .st-key-advice-recipe-links button {
             min-height: 2.8rem;
             padding: .35rem .25rem !important;
         }
@@ -1220,6 +1241,7 @@ with symptom_tab:
             if entry["症状名"] == selected_advice_name
         )
         clicked_recommended_ingredient = None
+        clicked_related_recipe = None
         with st.container(border=True):
             st.markdown(f"##### {advice['症状名']}")
             st.markdown("**東洋医学で考えられるタイプ**")
@@ -1257,23 +1279,24 @@ with symptom_tab:
 
             related_recipes = find_related_recipes(selected_advice_name, recipe_entries)
             if related_recipes:
-                st.markdown("**関連レシピ**")
-                for recipe in related_recipes:
-                    with st.container(border=True):
-                        st.markdown(f"##### {recipe['レシピ名']}")
-                        st.markdown(f"**分類：** {recipe['分類']}")
-                        st.markdown(
-                            f"**調理時間・調理法：** {recipe['調理時間・調理法']}"
-                        )
-                        st.markdown(
-                            f"**主な薬膳食材：** {recipe['主な薬膳食材']}"
-                        )
-                        st.markdown(f"**主な効能：** {recipe['主な効能']}")
-                        st.markdown("**材料**")
-                        st.write(recipe["材料"])
-                        st.markdown("**作り方**")
-                        st.write(recipe["作り方"])
-                        st.caption(recipe["ポイント"])
+                st.markdown("**おすすめレシピ**")
+                with st.container(key="advice-recipe-links"):
+                    for recipe in related_recipes:
+                        with st.container(border=True):
+                            if st.button(
+                                recipe["レシピ名"],
+                                key=(
+                                    f"advice-recipe-{advice['症状ID']}-"
+                                    f"{recipe['レシピID']}"
+                                ),
+                                type="secondary",
+                                help="クリックしてレシピの詳細を表示",
+                            ):
+                                clicked_related_recipe = recipe
+                            st.caption(
+                                f"{recipe['分類']}・{recipe['調理時間・調理法']}"
+                            )
+                            st.write(f"主な効能：{recipe['主な効能']}")
 
             st.markdown("**避けたいこと**")
             st.write(advice["避けたいこと"])
@@ -1332,6 +1355,8 @@ with symptom_tab:
 
         if clicked_recommended_ingredient:
             show_ingredient_dialog(clicked_recommended_ingredient)
+        elif clicked_related_recipe:
+            show_recipe_dialog(clicked_related_recipe)
 
 with wellness_tab:
     st.markdown("[← 食材をさがす](?page=search)")
