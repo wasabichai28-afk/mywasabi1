@@ -863,6 +863,9 @@ st.markdown(
         -webkit-text-fill-color: var(--wasabi-ink) !important;
     }
     .st-key-shuffle_daily_wellness button {
+        width: fit-content !important;
+        min-width: max-content !important;
+        padding: .35rem .65rem !important;
         color: #000 !important;
         background: #fff4bf !important;
         border: 1px solid #000 !important;
@@ -875,6 +878,24 @@ st.markdown(
     .st-key-shuffle_daily_wellness button:hover {
         background: #ffed99 !important;
         border-color: #000 !important;
+    }
+    .st-key-daily-wellness-heading [data-testid="stHorizontalBlock"] {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: .5rem;
+    }
+    .st-key-daily-wellness-heading [data-testid="stColumn"] {
+        flex: 0 0 auto !important;
+        width: auto !important;
+    }
+    .st-key-daily-wellness-heading [data-testid="stColumn"]:first-child {
+        flex: 0 1 auto !important;
+    }
+    .st-key-daily-wellness-heading h4 {
+        margin: 0;
+        white-space: nowrap;
     }
     .st-key-recipe-category-buttons button,
     .st-key-recipe-name-buttons button {
@@ -991,6 +1012,10 @@ st.markdown(
         [data-testid="stDialog"] button {
             min-height: 2.8rem;
         }
+        .st-key-shuffle_daily_wellness button {
+            min-height: 2.8rem;
+            padding: .35rem .65rem !important;
+        }
         .st-key-ingredient-results [data-testid="stHorizontalBlock"] {
             flex-wrap: wrap;
         }
@@ -1092,20 +1117,19 @@ daily_wellness = next(
 )
 clicked_daily_ingredient = None
 with st.container(border=True):
-    title_col, shuffle_col = st.columns([5, 1])
-    with title_col:
-        st.markdown("#### 今日のプチ養生")
-    with shuffle_col:
-        if st.button(
-            "シャッフル", key="shuffle_daily_wellness", use_container_width=True
-        ):
-            alternatives = [
-                entry for entry in wellness_entries
-                if entry["ID"] != daily_wellness["ID"]
-            ]
-            if alternatives:
-                daily_wellness = random.choice(alternatives)
-                st.session_state["daily_wellness_id"] = daily_wellness["ID"]
+    with st.container(key="daily-wellness-heading"):
+        title_col, shuffle_col = st.columns(2)
+        with title_col:
+            st.markdown("#### 今日のプチ養生")
+        with shuffle_col:
+            if st.button("シャッフル", key="shuffle_daily_wellness"):
+                alternatives = [
+                    entry for entry in wellness_entries
+                    if entry["ID"] != daily_wellness["ID"]
+                ]
+                if alternatives:
+                    daily_wellness = random.choice(alternatives)
+                    st.session_state["daily_wellness_id"] = daily_wellness["ID"]
 
     st.markdown(f"**{daily_wellness['タイトル']}**")
     st.write(daily_wellness["アドバイス本文"])
