@@ -405,13 +405,17 @@ def show_ingredient_details(ingredient: dict[str, str]) -> None:
                 ("炭水化物", "炭水化物(g)", "g"),
             )
             with st.container(key="calorie-metrics"):
-                metric_columns = st.columns(len(calorie_fields))
-                for column, (label, key, unit) in zip(metric_columns, calorie_fields):
-                    value = ingredient.get(key, "").strip()
-                    column.metric(
-                        label,
-                        f"{value} {unit}" if value else "記載なし",
-                    )
+                for row_start in range(0, len(calorie_fields), 2):
+                    metric_columns = st.columns(2)
+                    for column, (label, key, unit) in zip(
+                        metric_columns,
+                        calorie_fields[row_start : row_start + 2],
+                    ):
+                        value = ingredient.get(key, "").strip()
+                        column.metric(
+                            label,
+                            f"{value} {unit}" if value else "記載なし",
+                        )
             basis = ingredient.get("数値の基準・補足", "").strip()
             if basis:
                 st.caption(f"基準・補足：{basis}")
