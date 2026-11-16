@@ -1134,53 +1134,54 @@ daily_wellness = next(
     entry for entry in wellness_entries
     if entry["ID"] == st.session_state["daily_wellness_id"]
 )
-clicked_daily_ingredient = None
-with st.container(border=True):
-    with st.container(key="daily-wellness-heading"):
-        title_col, shuffle_col = st.columns(2)
-        with title_col:
-            st.markdown("#### 今日のプチ養生")
-        with shuffle_col:
-            if st.button("シャッフル", key="shuffle_daily_wellness"):
-                alternatives = [
-                    entry for entry in wellness_entries
-                    if entry["ID"] != daily_wellness["ID"]
-                ]
-                if alternatives:
-                    daily_wellness = random.choice(alternatives)
-                    st.session_state["daily_wellness_id"] = daily_wellness["ID"]
+if not (WELLNESS_PAGE or RECIPE_PAGE or SYMPTOM_PAGE):
+    clicked_daily_ingredient = None
+    with st.container(border=True):
+        with st.container(key="daily-wellness-heading"):
+            title_col, shuffle_col = st.columns(2)
+            with title_col:
+                st.markdown("#### 今日のプチ養生")
+            with shuffle_col:
+                if st.button("シャッフル", key="shuffle_daily_wellness"):
+                    alternatives = [
+                        entry for entry in wellness_entries
+                        if entry["ID"] != daily_wellness["ID"]
+                    ]
+                    if alternatives:
+                        daily_wellness = random.choice(alternatives)
+                        st.session_state["daily_wellness_id"] = daily_wellness["ID"]
 
-    st.markdown(f"**{daily_wellness['タイトル']}**")
-    st.write(daily_wellness["アドバイス本文"])
-    st.markdown("**おすすめの食材：**")
-    recommendations = [
-        item.strip()
-        for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
-        if item.strip()
-    ]
-    with st.container(key="daily-wellness-food-links"):
-        for row_start in range(0, len(recommendations), 4):
-            columns = st.columns(4)
-            for column_index, recommendation in enumerate(
-                recommendations[row_start : row_start + 4]
-            ):
-                with columns[column_index]:
-                    index = row_start + column_index
-                    ingredient = find_recommended_ingredient(recommendation, ingredients)
-                    if ingredient:
-                        if st.button(
-                            recommendation,
-                            key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
-                            type="secondary",
-                            help="クリックして食材の詳細を表示",
-                        ):
-                            clicked_daily_ingredient = ingredient
-                    else:
-                        st.caption(f"{recommendation}（詳細なし）")
-    st.caption(daily_wellness["ポイント・コツ"])
+        st.markdown(f"**{daily_wellness['タイトル']}**")
+        st.write(daily_wellness["アドバイス本文"])
+        st.markdown("**おすすめの食材：**")
+        recommendations = [
+            item.strip()
+            for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
+            if item.strip()
+        ]
+        with st.container(key="daily-wellness-food-links"):
+            for row_start in range(0, len(recommendations), 4):
+                columns = st.columns(4)
+                for column_index, recommendation in enumerate(
+                    recommendations[row_start : row_start + 4]
+                ):
+                    with columns[column_index]:
+                        index = row_start + column_index
+                        ingredient = find_recommended_ingredient(recommendation, ingredients)
+                        if ingredient:
+                            if st.button(
+                                recommendation,
+                                key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
+                                type="secondary",
+                                help="クリックして食材の詳細を表示",
+                            ):
+                                clicked_daily_ingredient = ingredient
+                        else:
+                            st.caption(f"{recommendation}（詳細なし）")
+        st.caption(daily_wellness["ポイント・コツ"])
 
-if clicked_daily_ingredient:
-    show_ingredient_dialog(clicked_daily_ingredient)
+    if clicked_daily_ingredient:
+        show_ingredient_dialog(clicked_daily_ingredient)
 
 categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
 if SYMPTOM_PAGE:
@@ -1294,7 +1295,12 @@ with search_tab:
         )
 
 with recipe_tab:
-    st.markdown("[← 食材をさがす](?page=search)")
+    st.button(
+        "← TOPへ戻る",
+        key="top-return-recipe",
+        on_click=navigate_to_page,
+        args=("search",),
+    )
     st.markdown("### 🍲 薬膳レシピ")
 
     recipe_categories = sorted({entry["分類"] for entry in recipe_entries})
@@ -1344,7 +1350,12 @@ with recipe_tab:
             show_recipe_dialog(clicked_recipe)
 
 with symptom_tab:
-    st.markdown("[← 食材をさがす](?page=search)")
+    st.button(
+        "← TOPへ戻る",
+        key="top-return-symptom",
+        on_click=navigate_to_page,
+        args=("search",),
+    )
     st.markdown("[養生・薬膳のヒントを見る](?page=wellness)")
     st.markdown("[薬膳レシピを見る](?page=recipe)")
     st.markdown("### 症状別で探す")
@@ -1482,7 +1493,12 @@ with symptom_tab:
             show_recipe_dialog(clicked_related_recipe)
 
 with wellness_tab:
-    st.markdown("[← 食材をさがす](?page=search)")
+    st.button(
+        "← TOPへ戻る",
+        key="top-return-wellness",
+        on_click=navigate_to_page,
+        args=("search",),
+    )
     st.markdown("[症状別で探す](?page=symptom)")
     st.markdown("[薬膳レシピを見る](?page=recipe)")
     st.markdown("### 🌿 養生・薬膳のヒント")
