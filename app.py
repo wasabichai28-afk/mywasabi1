@@ -190,6 +190,26 @@ def symptom_match_terms(value: str) -> set[str]:
     }
 
 
+def find_related_wellness_entries(
+    symptom_name: str,
+    wellness_entries: list[dict[str, str]],
+    limit: int = 3,
+) -> list[dict[str, str]]:
+    symptom_terms = symptom_match_terms(symptom_name)
+    if not symptom_terms:
+        return []
+
+    matches = []
+    for entry in wellness_entries:
+        concern_terms = symptom_match_terms(entry["対象の悩み・体質"])
+        overlap = symptom_terms.intersection(concern_terms)
+        if overlap:
+            matches.append((len(overlap), entry))
+
+    matches.sort(key=lambda match: match[0], reverse=True)
+    return [entry for _, entry in matches[:limit]]
+
+
 def find_related_recipes(
     symptom_name: str,
     recipes: list[dict[str, str]],
@@ -964,6 +984,7 @@ daily_wellness = next(
     entry for entry in wellness_entries
     if entry["ID"] == st.session_state["daily_wellness_id"]
 )
+clicked_daily_ingredient = None
 with st.container(border=True):
     title_col, shuffle_col = st.columns([5, 1])
     with title_col:
@@ -982,8 +1003,34 @@ with st.container(border=True):
 
     st.markdown(f"**{daily_wellness['タイトル']}**")
     st.write(daily_wellness["アドバイス本文"])
-    st.markdown(f"**おすすめの食材：** {daily_wellness['おすすめの食材']}")
+    st.markdown("**おすすめの食材：**")
+    recommendations = [
+        item.strip()
+        for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
+        if item.strip()
+    ]
+    for row_start in range(0, len(recommendations), 4):
+        columns = st.columns(4)
+        for column_index, recommendation in enumerate(
+            recommendations[row_start : row_start + 4]
+        ):
+            with columns[column_index]:
+                index = row_start + column_index
+                ingredient = find_recommended_ingredient(recommendation, ingredients)
+                if ingredient:
+                    if st.button(
+                        recommendation,
+                        key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
+                        type="secondary",
+                        help="クリックして食材の詳細を表示",
+                    ):
+                        clicked_daily_ingredient = ingredient
+                else:
+                    st.caption(f"{recommendation}（詳細なし）")
     st.caption(daily_wellness["ポイント・コツ"])
+
+if clicked_daily_ingredient:
+    show_ingredient_dialog(clicked_daily_ingredient)
 
 categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
 if SYMPTOM_PAGE:
@@ -1204,6 +1251,28 @@ with symptom_tab:
             st.write(advice["避けたいこと"])
         if clicked_recommended_ingredient:
             show_ingredient_dialog(clicked_recommended_ingredient)
+
+        related_wellness_entries = find_related_wellness_entries(
+            selected_advice_name, wellness_entries
+        )
+        st.markdown("#### あわせて読みたいプチ養生")
+        if related_wellness_entries:
+            for row_start in range(0, len(related_wellness_entries), 2):
+                columns = st.columns(2)
+                for column_index, entry in enumerate(
+                    related_wellness_entries[row_start : row_start + 2]
+                ):
+                    with columns[column_index]:
+                        with st.container(border=True):
+                            st.markdown(f"##### {entry['タイトル']}")
+                            st.caption(f"{entry['対象季節']}・{entry['分類']}")
+                            st.write(entry["アドバイス本文"])
+                            st.markdown(
+                                f"**おすすめの食材：** {entry['おすすめの食材']}"
+                            )
+                            st.caption(entry["ポイント・コツ"])
+        else:
+            st.info("選択した症状に関連するプチ養生はまだありません。")
 
 with wellness_tab:
     st.markdown("[← 食材をさがす](?page=search)")
