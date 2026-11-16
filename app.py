@@ -808,7 +808,8 @@ st.markdown(
         outline-offset: 2px;
     }
     .st-key-advice-food-links button[kind="secondary"],
-    .st-key-daily-wellness-food-links button[kind="secondary"] {
+    .st-key-daily-wellness-food-links button[kind="secondary"],
+    .st-key-related-wellness-food-links button[kind="secondary"] {
         min-height: 0;
         padding: 0 !important;
         color: var(--wasabi-green) !important;
@@ -819,7 +820,8 @@ st.markdown(
         justify-content: flex-start;
     }
     .st-key-advice-food-links button[kind="secondary"] p,
-    .st-key-daily-wellness-food-links button[kind="secondary"] p {
+    .st-key-daily-wellness-food-links button[kind="secondary"] p,
+    .st-key-related-wellness-food-links button[kind="secondary"] p {
         color: var(--wasabi-green) !important;
         -webkit-text-fill-color: var(--wasabi-green) !important;
         text-decoration: underline;
@@ -827,7 +829,8 @@ st.markdown(
         font-weight: 600;
     }
     .st-key-advice-food-links button[kind="secondary"]:hover p,
-    .st-key-daily-wellness-food-links button[kind="secondary"]:hover p {
+    .st-key-daily-wellness-food-links button[kind="secondary"]:hover p,
+    .st-key-related-wellness-food-links button[kind="secondary"]:hover p {
         color: var(--wasabi-ink) !important;
         -webkit-text-fill-color: var(--wasabi-ink) !important;
     }
@@ -944,7 +947,8 @@ st.markdown(
             min-width: 45% !important;
         }
         .st-key-advice-food-links button,
-        .st-key-daily-wellness-food-links button {
+        .st-key-daily-wellness-food-links button,
+        .st-key-related-wellness-food-links button {
             min-height: 2.8rem;
             padding: .35rem .25rem !important;
         }
@@ -1255,30 +1259,61 @@ with symptom_tab:
 
             st.markdown("**避けたいこと**")
             st.write(advice["避けたいこと"])
-        if clicked_recommended_ingredient:
-            show_ingredient_dialog(clicked_recommended_ingredient)
-
         related_wellness_entries = find_related_wellness_entries(
             selected_advice_name, wellness_entries
         )
         st.markdown("#### あわせて読みたいプチ養生")
         if related_wellness_entries:
-            for row_start in range(0, len(related_wellness_entries), 2):
-                columns = st.columns(2)
-                for column_index, entry in enumerate(
-                    related_wellness_entries[row_start : row_start + 2]
-                ):
-                    with columns[column_index]:
-                        with st.container(border=True):
-                            st.markdown(f"##### {entry['タイトル']}")
-                            st.caption(f"{entry['対象季節']}・{entry['分類']}")
-                            st.write(entry["アドバイス本文"])
-                            st.markdown(
-                                f"**おすすめの食材：** {entry['おすすめの食材']}"
-                            )
-                            st.caption(entry["ポイント・コツ"])
+            with st.container(key="related-wellness-food-links"):
+                for row_start in range(0, len(related_wellness_entries), 2):
+                    columns = st.columns(2)
+                    for column_index, entry in enumerate(
+                        related_wellness_entries[row_start : row_start + 2]
+                    ):
+                        with columns[column_index]:
+                            with st.container(border=True):
+                                st.markdown(f"##### {entry['タイトル']}")
+                                st.caption(f"{entry['対象季節']}・{entry['分類']}")
+                                st.write(entry["アドバイス本文"])
+                                st.markdown("**おすすめの食材：**")
+                                recommendations = [
+                                    item.strip()
+                                    for item in re.split(
+                                        r"[,，、]", entry["おすすめの食材"]
+                                    )
+                                    if item.strip()
+                                ]
+                                for row_start in range(0, len(recommendations), 4):
+                                    food_columns = st.columns(4)
+                                    for food_index, recommendation in enumerate(
+                                        recommendations[row_start : row_start + 4]
+                                    ):
+                                        with food_columns[food_index]:
+                                            index = row_start + food_index
+                                            ingredient = find_recommended_ingredient(
+                                                recommendation, ingredients
+                                            )
+                                            if ingredient:
+                                                if st.button(
+                                                    recommendation,
+                                                    key=(
+                                                        f"related-wellness-food-"
+                                                        f"{entry['ID']}-{index}"
+                                                    ),
+                                                    type="secondary",
+                                                    help="クリックして食材の詳細を表示",
+                                                ):
+                                                    clicked_recommended_ingredient = ingredient
+                                            else:
+                                                st.caption(
+                                                    f"{recommendation}（詳細なし）"
+                                                )
+                                st.caption(entry["ポイント・コツ"])
         else:
             st.info("選択した症状に関連するプチ養生はまだありません。")
+
+        if clicked_recommended_ingredient:
+            show_ingredient_dialog(clicked_recommended_ingredient)
 
 with wellness_tab:
     st.markdown("[← 食材をさがす](?page=search)")
