@@ -1308,8 +1308,6 @@ with symptom_tab:
         on_click=navigate_to_page,
         args=("search",),
     )
-    st.markdown("[養生・薬膳のヒントを見る](?page=wellness)")
-    st.markdown("[薬膳レシピを見る](?page=recipe)")
     st.markdown("### 症状別で探す")
     st.write("気になる症状から、養生法やおすすめ食材・レシピを確認できます。")
 
@@ -1451,8 +1449,6 @@ with wellness_tab:
         on_click=navigate_to_page,
         args=("search",),
     )
-    st.markdown("[症状別で探す](?page=symptom)")
-    st.markdown("[薬膳レシピを見る](?page=recipe)")
     st.markdown("### 🌿 養生・薬膳のヒント")
     st.write("毎日の暮らしに取り入れやすい、東洋医学と薬膳の基本をまとめました。")
 
