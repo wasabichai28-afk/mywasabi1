@@ -838,6 +838,20 @@ st.markdown(
         color: var(--wasabi-ink) !important;
         -webkit-text-fill-color: var(--wasabi-ink) !important;
     }
+    .st-key-shuffle_daily_wellness button {
+        color: #000 !important;
+        background: #fff4bf !important;
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    .st-key-shuffle_daily_wellness button p {
+        color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
+    }
+    .st-key-shuffle_daily_wellness button:hover {
+        background: #ffed99 !important;
+        border-color: #000 !important;
+    }
     .st-key-advice-food-links button[kind="secondary"]:focus-visible {
         outline: 2px solid var(--wasabi-leaf) !important;
         outline-offset: 2px;
