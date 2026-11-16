@@ -30,6 +30,7 @@ PAGE_SIZE = 12
 RESULT_COLUMNS = 6
 WELLNESS_PAGE = st.query_params.get("page") == "wellness"
 RECIPE_PAGE = st.query_params.get("page") == "recipe"
+SYMPTOM_PAGE = st.query_params.get("page") == "symptom"
 SEARCH_FIELDS = (
     "食材名",
     "検索用キーワード",
@@ -98,7 +99,6 @@ def load_ingredients() -> list[dict[str, str]]:
     return ingredients
 
 
-@st.cache_data
 def load_wellness_data(
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     datasets = (
@@ -140,7 +140,6 @@ def load_wellness_data(
     return loaded_datasets[0], loaded_datasets[1]
 
 
-@st.cache_data
 def load_recipe_data() -> list[dict[str, str]]:
     if not RECIPE_PATH.is_file():
         raise FileNotFoundError(f"レシピデータが見つかりません: {RECIPE_PATH.name}")
@@ -148,8 +147,11 @@ def load_recipe_data() -> list[dict[str, str]]:
     with RECIPE_PATH.open(encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
         required_fields = (
+            "レシピID",
             "レシピ名",
             "分類",
+            "調理時間・調理法",
+            "主な薬膳食材",
             "主な効能",
             "材料",
             "作り方",
@@ -166,6 +168,10 @@ def load_recipe_data() -> list[dict[str, str]]:
     for row_number, row in enumerate(recipes, start=2):
         if None in row or any(not (row.get(field) or "").strip() for field in required_fields):
             raise ValueError(f"{RECIPE_PATH.name} の{row_number}行目に空欄があります。")
+
+    recipe_ids = [row["レシピID"].strip() for row in recipes]
+    if len(recipe_ids) != len(set(recipe_ids)):
+        raise ValueError(f"{RECIPE_PATH.name} でレシピIDが重複しています。")
 
     return recipes
 
@@ -950,24 +956,35 @@ st.markdown(
     unsafe_allow_html=True,
 )
 categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
-if WELLNESS_PAGE:
-    wellness_tab, recipe_tab, search_tab = st.tabs([
+if SYMPTOM_PAGE:
+    symptom_tab, wellness_tab, recipe_tab, search_tab = st.tabs([
+        "症状別で探す",
         "養生・薬膳のヒント",
+        "薬膳レシピ",
+        "食材をさがす",
+    ])
+    knowledge_tab_position = 1
+elif WELLNESS_PAGE:
+    wellness_tab, symptom_tab, recipe_tab, search_tab = st.tabs([
+        "養生・薬膳のヒント",
+        "症状別で探す",
         "薬膳レシピ",
         "食材をさがす",
     ])
     knowledge_tab_position = 1
 elif RECIPE_PAGE:
-    recipe_tab, wellness_tab, search_tab = st.tabs([
+    recipe_tab, wellness_tab, symptom_tab, search_tab = st.tabs([
         "薬膳レシピ",
         "養生・薬膳のヒント",
+        "症状別で探す",
         "食材をさがす",
     ])
     knowledge_tab_position = 1
 else:
-    search_tab, wellness_tab, recipe_tab = st.tabs([
+    search_tab, wellness_tab, symptom_tab, recipe_tab = st.tabs([
         "食材をさがす",
         "養生・薬膳のヒント",
+        "症状別で探す",
         "薬膳レシピ",
     ])
     knowledge_tab_position = 2
@@ -984,7 +1001,7 @@ st.markdown(
 )
 
 with search_tab:
-    st.markdown("[症状別で探す](?page=wellness)")
+    st.markdown("[症状別で探す](?page=symptom)")
     st.markdown("[薬膳レシピを見る](?page=recipe)")
     st.markdown("#### 食材をさがす")
     with st.form("ingredient_search"):
@@ -1059,6 +1076,12 @@ with recipe_tab:
         st.info("条件に合うレシピがありません。絞り込み条件や検索語を変えてください。")
     for entry in filtered_recipes:
         with st.expander(f"{entry['レシピ名']}　·　{entry['分類']}"):
+            st.markdown(
+                f"**調理時間・調理法：** {entry['調理時間・調理法']}"
+            )
+            st.markdown(
+                f"**主な薬膳食材：** {entry['主な薬膳食材']}"
+            )
             st.markdown(f"**主な効能：** {entry['主な効能']}")
             st.markdown("**材料**")
             st.write(entry["材料"])
@@ -1070,33 +1093,13 @@ with recipe_tab:
                 f"{entry['この症状で悩んでいる人におすすめ！']}"
             )
 
-with wellness_tab:
+with symptom_tab:
     st.markdown("[← 食材をさがす](?page=search)")
+    st.markdown("[養生・薬膳のヒントを見る](?page=wellness)")
     st.markdown("[薬膳レシピを見る](?page=recipe)")
-    st.markdown("### 🌿 養生・薬膳のヒント")
-    st.write("毎日の暮らしに取り入れやすい、東洋医学と薬膳の基本をまとめました。")
+    st.markdown("### 症状別で探す")
+    st.write("気になる症状から、養生法やおすすめ食材・レシピを確認できます。")
 
-    current_season = {
-        3: "春", 4: "春", 5: "春",
-        6: "夏", 7: "夏", 8: "夏",
-        9: "秋", 10: "秋", 11: "秋",
-        12: "冬", 1: "冬", 2: "冬",
-    }[date.today().month]
-    seasonal_entries = sorted(
-        (
-            entry for entry in wellness_entries
-            if entry["対象季節"] in (current_season, "通年")
-        ),
-        key=lambda entry: entry["対象季節"] != current_season,
-    )[:3]
-    st.markdown(f"#### 今の季節のおすすめ（{current_season}）")
-    for entry in seasonal_entries:
-        with st.expander(entry["タイトル"]):
-            st.write(entry["アドバイス本文"])
-            st.markdown(f"**おすすめの食材：** {entry['おすすめの食材']}")
-            st.caption(entry["ポイント・コツ"])
-
-    st.markdown("#### 症状別おすすめ養生")
     symptom_names = [entry["症状名"] for entry in symptom_advice_entries]
     if "symptom_advice_choice" not in st.session_state:
         st.session_state["symptom_advice_choice"] = "選択してください"
@@ -1152,10 +1155,14 @@ with wellness_tab:
                 st.markdown("**関連レシピ**")
                 for recipe in related_recipes:
                     with st.container(border=True):
-                        st.markdown(
-                            f"##### {recipe['レシピ名']}"
-                        )
+                        st.markdown(f"##### {recipe['レシピ名']}")
                         st.markdown(f"**分類：** {recipe['分類']}")
+                        st.markdown(
+                            f"**調理時間・調理法：** {recipe['調理時間・調理法']}"
+                        )
+                        st.markdown(
+                            f"**主な薬膳食材：** {recipe['主な薬膳食材']}"
+                        )
                         st.markdown(f"**主な効能：** {recipe['主な効能']}")
                         st.markdown("**材料**")
                         st.write(recipe["材料"])
@@ -1167,6 +1174,33 @@ with wellness_tab:
             st.write(advice["避けたいこと"])
         if clicked_recommended_ingredient:
             show_ingredient_dialog(clicked_recommended_ingredient)
+
+with wellness_tab:
+    st.markdown("[← 食材をさがす](?page=search)")
+    st.markdown("[症状別で探す](?page=symptom)")
+    st.markdown("[薬膳レシピを見る](?page=recipe)")
+    st.markdown("### 🌿 養生・薬膳のヒント")
+    st.write("毎日の暮らしに取り入れやすい、東洋医学と薬膳の基本をまとめました。")
+
+    current_season = {
+        3: "春", 4: "春", 5: "春",
+        6: "夏", 7: "夏", 8: "夏",
+        9: "秋", 10: "秋", 11: "秋",
+        12: "冬", 1: "冬", 2: "冬",
+    }[date.today().month]
+    seasonal_entries = sorted(
+        (
+            entry for entry in wellness_entries
+            if entry["対象季節"] in (current_season, "通年")
+        ),
+        key=lambda entry: entry["対象季節"] != current_season,
+    )[:3]
+    st.markdown(f"#### 今の季節のおすすめ（{current_season}）")
+    for entry in seasonal_entries:
+        with st.expander(entry["タイトル"]):
+            st.write(entry["アドバイス本文"])
+            st.markdown(f"**おすすめの食材：** {entry['おすすめの食材']}")
+            st.caption(entry["ポイント・コツ"])
 
     st.markdown("#### プチ養生一覧")
     with st.container(key="wellness-filters"):
