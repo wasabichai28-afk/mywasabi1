@@ -1191,11 +1191,34 @@ with recipe_tab:
     st.markdown("### 🍲 薬膳レシピ")
     st.write("体調に合わせて選びやすい、薬膳の考え方を取り入れた簡単レシピです。")
 
-    recipe_category = st.selectbox(
-        "分類",
-        ["すべて", *sorted({entry["分類"] for entry in recipe_entries})],
-        key="recipe_category_filter",
-    )
+    recipe_categories = [
+        "すべて",
+        *sorted({entry["分類"] for entry in recipe_entries}),
+    ]
+    if st.session_state.get("recipe_category_filter") not in recipe_categories:
+        st.session_state["recipe_category_filter"] = "すべて"
+
+    st.markdown("#### 分類を選ぶ")
+    with st.container(key="recipe-category-buttons"):
+        for row_start in range(0, len(recipe_categories), 3):
+            columns = st.columns(3)
+            for column_index, category in enumerate(
+                recipe_categories[row_start : row_start + 3]
+            ):
+                with columns[column_index]:
+                    if st.button(
+                        category,
+                        key=f"recipe-category-{row_start + column_index}",
+                        type=(
+                            "primary"
+                            if category == st.session_state["recipe_category_filter"]
+                            else "secondary"
+                        ),
+                        use_container_width=True,
+                    ):
+                        st.session_state["recipe_category_filter"] = category
+
+    recipe_category = st.session_state["recipe_category_filter"]
     filtered_recipes = [
         entry for entry in recipe_entries
         if (recipe_category == "すべて" or entry["分類"] == recipe_category)
