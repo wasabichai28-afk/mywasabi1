@@ -1214,7 +1214,6 @@ with search_tab:
 with recipe_tab:
     st.markdown("[← 食材をさがす](?page=search)")
     st.markdown("### 🍲 薬膳レシピ")
-    st.write("体調に合わせて選びやすい、薬膳の考え方を取り入れた簡単レシピです。")
 
     recipe_categories = sorted({entry["分類"] for entry in recipe_entries})
     if st.session_state.get("recipe_category_filter") not in recipe_categories:
