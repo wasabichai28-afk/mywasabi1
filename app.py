@@ -872,7 +872,8 @@ st.markdown(
         background: #ffed99 !important;
         border-color: #000 !important;
     }
-    .st-key-recipe-category-buttons button {
+    .st-key-recipe-category-buttons button,
+    .st-key-recipe-name-buttons button {
         width: fit-content !important;
         min-width: 0 !important;
         padding: .35rem .7rem !important;
@@ -881,15 +882,18 @@ st.markdown(
         border: 1px solid #2463a6 !important;
         box-shadow: none !important;
     }
-    .st-key-recipe-category-buttons button p {
+    .st-key-recipe-category-buttons button p,
+    .st-key-recipe-name-buttons button p {
         color: #2463a6 !important;
         -webkit-text-fill-color: #2463a6 !important;
     }
-    .st-key-recipe-category-buttons button:hover {
+    .st-key-recipe-category-buttons button:hover,
+    .st-key-recipe-name-buttons button:hover {
         background: transparent !important;
         border-color: #174b84 !important;
     }
-    .st-key-recipe-category-buttons button:hover p {
+    .st-key-recipe-category-buttons button:hover p,
+    .st-key-recipe-name-buttons button:hover p {
         color: #174b84 !important;
         -webkit-text-fill-color: #174b84 !important;
     }
@@ -1231,6 +1235,7 @@ with recipe_tab:
                     ),
                 ):
                     st.session_state["recipe_category_filter"] = category
+                    st.session_state["selected_recipe_id"] = ""
 
     recipe_category = st.session_state["recipe_category_filter"]
     filtered_recipes = [
@@ -1243,24 +1248,52 @@ with recipe_tab:
         st.caption(f"表示：{len(filtered_recipes)}件")
     if recipe_category and not filtered_recipes:
         st.info("この分類にレシピがありません。別の分類を選んでください。")
-    for entry in filtered_recipes:
-        with st.expander(f"{entry['レシピ名']}　·　{entry['分類']}"):
-            st.markdown(
-                f"**調理時間・調理法：** {entry['調理時間・調理法']}"
-            )
-            st.markdown(
-                f"**主な薬膳食材：** {entry['主な薬膳食材']}"
-            )
-            st.markdown(f"**主な効能：** {entry['主な効能']}")
-            st.markdown("**材料**")
-            st.write(entry["材料"])
-            st.markdown("**作り方**")
-            st.write(entry["作り方"])
-            st.markdown(f"**ポイント：** {entry['ポイント']}")
-            st.caption(
-                "おすすめの人："
-                f"{entry['この症状で悩んでいる人におすすめ！']}"
-            )
+    if filtered_recipes:
+        recipe_ids = {entry["レシピID"] for entry in filtered_recipes}
+        if st.session_state.get("selected_recipe_id") not in recipe_ids:
+            st.session_state["selected_recipe_id"] = ""
+        st.markdown("#### レシピ名を選ぶ")
+        with st.container(key="recipe-name-buttons"):
+            for entry in filtered_recipes:
+                if st.button(
+                    entry["レシピ名"],
+                    key=f"recipe-name-{entry['レシピID']}",
+                    type=(
+                        "primary"
+                        if entry["レシピID"] == st.session_state["selected_recipe_id"]
+                        else "secondary"
+                    ),
+                ):
+                    st.session_state["selected_recipe_id"] = entry["レシピID"]
+
+        selected_recipe = next(
+            (
+                entry for entry in filtered_recipes
+                if entry["レシピID"] == st.session_state["selected_recipe_id"]
+            ),
+            None,
+        )
+        if selected_recipe:
+            with st.container(border=True, key="selected-recipe-card"):
+                st.markdown(f"### {selected_recipe['レシピ名']}")
+                st.markdown(
+                    f"**調理時間・調理法：** {selected_recipe['調理時間・調理法']}"
+                )
+                st.markdown(
+                    f"**主な薬膳食材：** {selected_recipe['主な薬膳食材']}"
+                )
+                st.markdown(f"**主な効能：** {selected_recipe['主な効能']}")
+                st.markdown("**材料**")
+                st.write(selected_recipe["材料"])
+                st.markdown("**作り方**")
+                st.write(selected_recipe["作り方"])
+                st.markdown(f"**ポイント：** {selected_recipe['ポイント']}")
+                st.caption(
+                    "おすすめの人："
+                    f"{selected_recipe['この症状で悩んでいる人におすすめ！']}"
+                )
+        else:
+            st.info("レシピ名を選ぶと、詳細がカードで表示されます。")
 
 with symptom_tab:
     st.markdown("[← 食材をさがす](?page=search)")
