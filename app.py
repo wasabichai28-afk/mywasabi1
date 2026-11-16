@@ -444,7 +444,7 @@ def show_ingredient_dialog(ingredient: dict[str, str]) -> None:
     show_ingredient_details(ingredient)
 
 
-@st.dialog("薬膳レシピ")
+@st.dialog("薬膳レシピ", width="large")
 def show_recipe_dialog(recipe: dict[str, str]) -> None:
     st.markdown(f"### {recipe['レシピ名']}")
     st.caption(f"{recipe['分類']}・{recipe['調理時間・調理法']}")
@@ -880,20 +880,18 @@ st.markdown(
         border-color: #000 !important;
     }
     .st-key-daily-wellness-heading [data-testid="stHorizontalBlock"] {
-        display: flex;
-        flex-wrap: nowrap;
+        display: grid !important;
+        grid-template-columns: max-content max-content;
         align-items: center;
         justify-content: flex-start;
         gap: .5rem;
     }
     .st-key-daily-wellness-heading [data-testid="stColumn"] {
-        flex: 0 0 auto !important;
+        flex: none !important;
         width: auto !important;
     }
-    .st-key-daily-wellness-heading [data-testid="stColumn"]:first-child {
-        flex: 0 1 auto !important;
-    }
     .st-key-daily-wellness-heading h4 {
+        display: inline-block;
         margin: 0;
         white-space: nowrap;
     }
@@ -1311,51 +1309,18 @@ with recipe_tab:
     if recipe_category and not filtered_recipes:
         st.info("この分類にレシピがありません。別の分類を選んでください。")
     if filtered_recipes:
-        recipe_ids = {entry["レシピID"] for entry in filtered_recipes}
-        if st.session_state.get("selected_recipe_id") not in recipe_ids:
-            st.session_state["selected_recipe_id"] = ""
+        clicked_recipe = None
         st.markdown("#### レシピ名を選ぶ")
         with st.container(key="recipe-name-buttons"):
             for entry in filtered_recipes:
                 if st.button(
                     entry["レシピ名"],
                     key=f"recipe-name-{entry['レシピID']}",
-                    type=(
-                        "primary"
-                        if entry["レシピID"] == st.session_state["selected_recipe_id"]
-                        else "secondary"
-                    ),
+                    type="secondary",
                 ):
-                    st.session_state["selected_recipe_id"] = entry["レシピID"]
-
-        selected_recipe = next(
-            (
-                entry for entry in filtered_recipes
-                if entry["レシピID"] == st.session_state["selected_recipe_id"]
-            ),
-            None,
-        )
-        if selected_recipe:
-            with st.container(border=True, key="selected-recipe-card"):
-                st.markdown(f"### {selected_recipe['レシピ名']}")
-                st.markdown(
-                    f"**調理時間・調理法：** {selected_recipe['調理時間・調理法']}"
-                )
-                st.markdown(
-                    f"**主な薬膳食材：** {selected_recipe['主な薬膳食材']}"
-                )
-                st.markdown(f"**主な効能：** {selected_recipe['主な効能']}")
-                st.markdown("**材料**")
-                st.write(selected_recipe["材料"])
-                st.markdown("**作り方**")
-                st.write(selected_recipe["作り方"])
-                st.markdown(f"**ポイント：** {selected_recipe['ポイント']}")
-                st.caption(
-                    "おすすめの人："
-                    f"{selected_recipe['この症状で悩んでいる人におすすめ！']}"
-                )
-        else:
-            st.info("レシピ名を選ぶと、詳細がカードで表示されます。")
+                    clicked_recipe = entry
+        if clicked_recipe:
+            show_recipe_dialog(clicked_recipe)
 
 with symptom_tab:
     st.markdown("[← 食材をさがす](?page=search)")
