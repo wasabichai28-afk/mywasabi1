@@ -969,6 +969,27 @@ st.markdown(
         section.main > div {
             padding: .4rem .7rem 1.5rem;
         }
+        .st-key-recipe-category-buttons [data-testid="stHorizontalBlock"] {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .5rem;
+        }
+        .st-key-recipe-category-buttons [data-testid="stColumn"] {
+            flex: none !important;
+            width: auto !important;
+            min-width: 0 !important;
+        }
+        .st-key-recipe-category-buttons button {
+            width: 100% !important;
+            min-height: 2.8rem;
+            padding: .35rem .25rem !important;
+        }
+        .st-key-recipe-category-buttons button p {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            text-align: center;
+            font-size: .82rem;
+        }
         .brand-header {
             margin: .2rem 0 1rem;
             padding: 1.15rem 1rem;
