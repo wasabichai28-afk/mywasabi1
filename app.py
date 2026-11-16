@@ -872,6 +872,27 @@ st.markdown(
         background: #ffed99 !important;
         border-color: #000 !important;
     }
+    .st-key-recipe-category-buttons button {
+        width: fit-content !important;
+        min-width: 0 !important;
+        padding: .35rem .7rem !important;
+        color: #2463a6 !important;
+        background: transparent !important;
+        border: 1px solid #2463a6 !important;
+        box-shadow: none !important;
+    }
+    .st-key-recipe-category-buttons button p {
+        color: #2463a6 !important;
+        -webkit-text-fill-color: #2463a6 !important;
+    }
+    .st-key-recipe-category-buttons button:hover {
+        background: transparent !important;
+        border-color: #174b84 !important;
+    }
+    .st-key-recipe-category-buttons button:hover p {
+        color: #174b84 !important;
+        -webkit-text-fill-color: #174b84 !important;
+    }
     .st-key-clear-search-button button {
         color: #000 !important;
         background: #eeeeee !important;
@@ -1214,7 +1235,6 @@ with recipe_tab:
                             if category == st.session_state["recipe_category_filter"]
                             else "secondary"
                         ),
-                        use_container_width=True,
                     ):
                         st.session_state["recipe_category_filter"] = category
 
