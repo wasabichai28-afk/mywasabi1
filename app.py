@@ -17,9 +17,6 @@ def resolve_data_file(filename: str) -> Path:
 
     stem = Path(filename).stem
     matching_files = sorted(DATA_DIRECTORY.glob(f"{stem}*.csv"))
-    exact_match = next((match for match in matching_files if match.name == filename), None)
-    if exact_match is not None:
-        return exact_match
     if matching_files:
         return matching_files[0]
     return path
@@ -64,7 +61,6 @@ NUTRITION_FIELDS = (
 )
 
 
-@st.cache_data
 def load_ingredients() -> list[dict[str, str]]:
     if not DATA_PATH.is_file():
         raise FileNotFoundError(f"食材データが見つかりません: {DATA_PATH.name}")
@@ -298,7 +294,6 @@ def clear_search() -> None:
     st.session_state["query_input"] = ""
     st.session_state["result_category_input"] = "すべて"
     st.session_state["submitted_query"] = ""
-    st.session_state["search_submitted"] = False
     st.session_state["search_results_open"] = False
     st.session_state["result_page"] = 1
     st.session_state["selected_ingredient_id"] = ""
@@ -1023,7 +1018,6 @@ with search_tab:
     if search_submitted:
         st.session_state["submitted_query"] = query
         st.session_state["result_category_input"] = "すべて"
-        st.session_state["search_submitted"] = True
         st.session_state["search_results_open"] = True
         st.session_state["selected_ingredient_id"] = ""
         st.session_state["result_page"] = 1
@@ -1151,11 +1145,7 @@ with wellness_tab:
                                 ):
                                     clicked_recommended_ingredient = ingredient
                             else:
-                                st.markdown(
-                                    f"<span style='color:#42634a'>{recommendation}</span>"
-                                    " <small>（詳細なし）</small>",
-                                    unsafe_allow_html=True,
-                                )
+                                st.caption(f"{recommendation}（詳細なし）")
 
             related_recipes = find_related_recipes(selected_advice_name, recipe_entries)
             if related_recipes:
