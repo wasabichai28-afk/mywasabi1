@@ -739,6 +739,26 @@ st.markdown(
     [data-baseweb="popover"] [role="option"][aria-selected="true"] {
         background: #edf1e5 !important;
     }
+    .st-key-symptom-picker [data-baseweb="select"] > div {
+        height: auto !important;
+        min-height: 2.8rem;
+        align-items: center;
+    }
+    .st-key-symptom-picker [data-baseweb="select"] [class*="singleValue"] {
+        position: static !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        line-height: 1.4;
+    }
+    [data-baseweb="popover"] [role="option"] {
+        height: auto !important;
+        min-height: 2.5rem;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        line-height: 1.4;
+    }
     div[data-testid="stForm"] button[kind="primary"] {
         background: var(--wasabi-green) !important;
         border: 1px solid var(--wasabi-green) !important;
@@ -1278,11 +1298,12 @@ with symptom_tab:
     if "symptom_advice_choice" not in st.session_state:
         st.session_state["symptom_advice_choice"] = "選択してください"
     st.caption("気になる症状を選ぶと、養生法やおすすめ食材が表示されます。")
-    selected_advice_name = st.selectbox(
-        "気になる症状を選ぶ",
-        ["選択してください", *symptom_names],
-        key="symptom_advice_choice",
-    )
+    with st.container(key="symptom-picker"):
+        selected_advice_name = st.selectbox(
+            "気になる症状を選ぶ",
+            ["選択してください", *symptom_names],
+            key="symptom_advice_choice",
+        )
     if selected_advice_name != "選択してください":
         advice = next(
             entry for entry in symptom_advice_entries
