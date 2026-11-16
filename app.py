@@ -739,24 +739,6 @@ st.markdown(
     [data-baseweb="popover"] [role="option"][aria-selected="true"] {
         background: #edf1e5 !important;
     }
-    .st-key-symptom-picker [data-baseweb="select"] > div {
-        height: auto !important;
-        min-height: 2.8rem;
-        align-items: center;
-    }
-    .st-key-symptom-picker [data-baseweb="select"] [class*="singleValue"] {
-        position: relative !important;
-        left: auto !important;
-        top: auto !important;
-        transform: none !important;
-        box-sizing: border-box;
-        max-width: calc(100% - 1rem) !important;
-        padding-left: .35rem;
-        white-space: normal !important;
-        overflow: visible !important;
-        text-overflow: clip !important;
-        line-height: 1.4;
-    }
     [data-baseweb="popover"] [role="option"] {
         height: auto !important;
         min-height: 2.5rem;
@@ -1309,6 +1291,8 @@ with symptom_tab:
             ["選択してください", *symptom_names],
             key="symptom_advice_choice",
         )
+        if selected_advice_name != "選択してください":
+            st.markdown(f"**選択中：** {selected_advice_name}")
     if selected_advice_name != "選択してください":
         advice = next(
             entry for entry in symptom_advice_entries
