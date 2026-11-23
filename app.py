@@ -1,14 +1,31 @@
 import csv
+import io
 import random
 import re
 import unicodedata
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 import streamlit as st
 
 
 DATA_DIRECTORY = Path(__file__).parent
+
+# ★ ここにGoogleスプレッドシートのIDを設定してください
+# 例: https://docs.google.com/spreadsheets/d/【ここがSPREADSHEET_ID】/edit
+SPREADSHEET_ID = "1CIgCWaz7y6HswMyNh-BFzFcdgA9iFiISarSbnFYwm-s"
+
+# 各シートのタブ名
+SHEET_NAMES = {
+    "ingredients": "総データ",
+    "wellness_list": "プチ養生_プチ養生一覧-v4_最新",
+    "symptom_advice": "プチ養生_症状別おすすめ養生-v5_最新",
+    "recipe": "プチ養生_レシピ-v10_最新",
+}
+
+# もしタブ名が異なる場合やGIDで指定したい場合は、数値のGIDを設定してください（例: {"ingredients": "0"}）
+SHEET_GIDS: dict[str, str] = {}
 
 
 def resolve_data_file(*prefixes: str) -> Path:
@@ -65,26 +82,82 @@ NUTRITION_FIELDS = (
 )
 
 
-def load_ingredients() -> list[dict[str, str]]:
-    if not DATA_PATH.is_file():
-        raise FileNotFoundError(f"食材データが見つかりません: {DATA_PATH.name}")
+def build_sheet_csv_url(key: str) -> str | None:
+    sheet_id = SPREADSHEET_ID.strip()
+    if not sheet_id:
+        return None
 
-    with DATA_PATH.open(encoding="utf-8-sig", newline="") as file:
+    gid = (SHEET_GIDS.get(key) or "").strip()
+    if gid:
+        return f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={quote(gid)}"
+
+    sheet_name = (SHEET_NAMES.get(key) or "").strip()
+    if sheet_name:
+        return (
+            f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
+            f"?tqx=out:csv&sheet={quote(sheet_name)}"
+        )
+    return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_csv_text_from_url(url: str) -> str:
+    import urllib.request
+
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        raw_bytes = response.read()
+    return raw_bytes.decode("utf-8-sig")
+
+
+def read_rows_from_source(key: str, fallback_path: Path) -> tuple[list[str], list[dict[str, str]], str]:
+    url = build_sheet_csv_url(key)
+    if url:
+        try:
+            csv_text = fetch_csv_text_from_url(url)
+            reader = csv.DictReader(io.StringIO(csv_text))
+            fieldnames = list(reader.fieldnames or [])
+            rows = [dict(row) for row in reader]
+            source_label = f"Googleスプレッドシート ({SHEET_NAMES.get(key, key)})"
+            return fieldnames, rows, source_label
+        except Exception as exc:
+            if not fallback_path.is_file():
+                raise RuntimeError(
+                    f"Googleスプレッドシート ({SHEET_NAMES.get(key, key)}) の読み込みに失敗しました。"
+                    "共有設定が「リンクを知っている全員（閲覧者）」になっているか、シート名・IDを確認してください。"
+                    f"\n詳細: {exc}"
+                ) from exc
+
+    if not fallback_path.is_file():
+        raise FileNotFoundError(
+            f"データが見つかりません。SPREADSHEET_ID を設定するか、ローカルCSVを配置してください: {fallback_path.name}"
+        )
+
+    with fallback_path.open(encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
-        required_fields = set(DISPLAY_FIELDS + SEARCH_FIELDS + ("食材ID",))
-        required_columns = required_fields | set(RECIPE_FIELDS) | set(NUTRITION_FIELDS)
-        if not reader.fieldnames or not required_columns.issubset(reader.fieldnames):
-            raise ValueError("CSVの列名が想定と異なります。食材データの形式を確認してください。")
-        ingredients = [dict(row) for row in reader]
+        fieldnames = list(reader.fieldnames or [])
+        rows = [dict(row) for row in reader]
+    return fieldnames, rows, fallback_path.name
+
+
+def load_ingredients() -> list[dict[str, str]]:
+    fieldnames, ingredients, source_name = read_rows_from_source("ingredients", DATA_PATH)
+    required_fields = set(DISPLAY_FIELDS + SEARCH_FIELDS + ("食材ID",))
+    required_columns = required_fields | set(RECIPE_FIELDS) | set(NUTRITION_FIELDS)
+    if not fieldnames or not required_columns.issubset(fieldnames):
+        raise ValueError("列名が想定と異なります。食材データの形式を確認してください。")
 
     if not ingredients:
-        raise ValueError(f"{DATA_PATH.name} に食材データがありません。")
+        raise ValueError(f"{source_name} に食材データがありません。")
 
     ingredient_ids = [
         (ingredient.get("食材ID") or "").strip() for ingredient in ingredients
     ]
     if any(not ingredient_id for ingredient_id in ingredient_ids):
-        raise ValueError("食材IDが空のレコードがあります。CSVを確認してください。")
+        raise ValueError("食材IDが空のレコードがあります。データを確認してください。")
 
     for row_number, ingredient in enumerate(ingredients, start=2):
         if None in ingredient or any(
@@ -93,50 +166,60 @@ def load_ingredients() -> list[dict[str, str]]:
             if field != "食材ID"
         ):
             raise ValueError(
-                f"{DATA_PATH.name} の{row_number}行目に空欄または列数の不整合があります。"
+                f"{source_name} の{row_number}行目に空欄または列数の不整合があります。"
             )
 
     if len(set(ingredient_ids)) != len(ingredient_ids):
-        raise ValueError("食材IDが重複しています。CSV内の食材IDを一意にしてください。")
+        raise ValueError("食材IDが重複しています。食材IDを一意にしてください。")
 
     return ingredients
 
 
-def load_wellness_data(
-) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+def load_wellness_data() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     datasets = (
         (
+            "wellness_list",
             WELLNESS_LIST_PATH,
-            ("ID", "タイトル", "分類", "対象季節", "対象の悩み・体質",
-             "アドバイス本文", "おすすめの食材", "ポイント・コツ"),
+            (
+                "ID",
+                "タイトル",
+                "分類",
+                "対象季節",
+                "対象の悩み・体質",
+                "アドバイス本文",
+                "おすすめの食材",
+                "ポイント・コツ",
+            ),
         ),
         (
+            "symptom_advice",
             SYMPTOM_ADVICE_PATH,
-            ("症状ID", "症状名", "主な原因・タイプ（東洋医学）",
-             "おすすめの食材・生薬", "養生法・アドバイス", "避けたいこと"),
+            (
+                "症状ID",
+                "症状名",
+                "主な原因・タイプ（東洋医学）",
+                "おすすめの食材・生薬",
+                "養生法・アドバイス",
+                "避けたいこと",
+            ),
         ),
     )
     loaded_datasets = []
-    for path, required_fields in datasets:
-        if not path.is_file():
-            raise FileNotFoundError(f"養生データが見つかりません: {path.name}")
-
-        with path.open(encoding="utf-8-sig", newline="") as file:
-            reader = csv.DictReader(file)
-            if not reader.fieldnames or not set(required_fields).issubset(reader.fieldnames):
-                raise ValueError(f"{path.name} の列名が想定と異なります。")
-            rows = list(reader)
+    for key, path, required_fields in datasets:
+        fieldnames, rows, source_name = read_rows_from_source(key, path)
+        if not fieldnames or not set(required_fields).issubset(fieldnames):
+            raise ValueError(f"{source_name} の列名が想定と異なります。")
 
         id_field = required_fields[0]
         identifiers = []
         for row_number, row in enumerate(rows, start=2):
             if None in row or any(not (row.get(field) or "").strip() for field in required_fields):
-                raise ValueError(f"{path.name} の{row_number}行目に空欄または列数の不整合があります。")
+                raise ValueError(f"{source_name} の{row_number}行目に空欄または列数の不整合があります。")
             identifiers.append(row[id_field].strip())
         if not rows:
-            raise ValueError(f"{path.name} にデータがありません。")
+            raise ValueError(f"{source_name} にデータがありません。")
         if len(identifiers) != len(set(identifiers)):
-            raise ValueError(f"{path.name} でIDが重複しています。")
+            raise ValueError(f"{source_name} でIDが重複しています。")
 
         loaded_datasets.append(rows)
 
@@ -144,37 +227,32 @@ def load_wellness_data(
 
 
 def load_recipe_data() -> list[dict[str, str]]:
-    if not RECIPE_PATH.is_file():
-        raise FileNotFoundError(f"レシピデータが見つかりません: {RECIPE_PATH.name}")
-
-    with RECIPE_PATH.open(encoding="utf-8-sig", newline="") as file:
-        reader = csv.DictReader(file)
-        required_fields = (
-            "レシピID",
-            "レシピ名",
-            "分類",
-            "調理時間・調理法",
-            "主な薬膳食材",
-            "主な効能",
-            "材料",
-            "作り方",
-            "ポイント",
-            "この症状で悩んでいる人におすすめ！",
-        )
-        if not reader.fieldnames or not set(required_fields).issubset(reader.fieldnames):
-            raise ValueError(f"{RECIPE_PATH.name} の列名が想定と異なります。")
-        recipes = [dict(row) for row in reader]
+    fieldnames, recipes, source_name = read_rows_from_source("recipe", RECIPE_PATH)
+    required_fields = (
+        "レシピID",
+        "レシピ名",
+        "分類",
+        "調理時間・調理法",
+        "主な薬膳食材",
+        "主な効能",
+        "材料",
+        "作り方",
+        "ポイント",
+        "この症状で悩んでいる人におすすめ！",
+    )
+    if not fieldnames or not set(required_fields).issubset(fieldnames):
+        raise ValueError(f"{source_name} の列名が想定と異なります。")
 
     if not recipes:
-        raise ValueError(f"{RECIPE_PATH.name} にレシピデータがありません。")
+        raise ValueError(f"{source_name} にレシピデータがありません。")
 
     for row_number, row in enumerate(recipes, start=2):
         if None in row or any(not (row.get(field) or "").strip() for field in required_fields):
-            raise ValueError(f"{RECIPE_PATH.name} の{row_number}行目に空欄があります。")
+            raise ValueError(f"{source_name} の{row_number}行目に空欄があります。")
 
     recipe_ids = [row["レシピID"].strip() for row in recipes]
     if len(recipe_ids) != len(set(recipe_ids)):
-        raise ValueError(f"{RECIPE_PATH.name} でレシピIDが重複しています。")
+        raise ValueError(f"{source_name} でレシピIDが重複しています。")
 
     return recipes
 
@@ -943,614 +1021,4 @@ st.markdown(
         border-color: #999 !important;
     }
     .st-key-advice-food-links button[kind="secondary"]:focus-visible {
-        outline: 2px solid var(--wasabi-leaf) !important;
-        outline-offset: 2px;
-    }
-    .st-key-advice-food-links [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem;
-    }
-    @media (max-width: 900px) {
-        .st-key-ingredient-results [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap;
-        }
-        .st-key-ingredient-results [data-testid="stColumn"] {
-            flex: 1 1 30% !important;
-            min-width: 30% !important;
-        }
-    }
-    @media (max-width: 560px) {
-        section.main > div {
-            padding: .4rem .7rem 1.5rem;
-        }
-        .st-key-recipe-category-buttons [data-testid="stHorizontalBlock"] {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .5rem;
-        }
-        .st-key-recipe-category-buttons [data-testid="stColumn"] {
-            flex: none !important;
-            width: auto !important;
-            min-width: 0 !important;
-        }
-        .st-key-recipe-category-buttons button {
-            width: 100% !important;
-            min-height: 2.8rem;
-            padding: .35rem .25rem !important;
-        }
-        .st-key-recipe-category-buttons button p {
-            white-space: normal;
-            overflow-wrap: anywhere;
-            text-align: center;
-            font-size: .82rem;
-        }
-        .brand-header {
-            margin: .2rem 0 1rem;
-            padding: 1.15rem 1rem;
-            border-radius: 14px;
-        }
-        .brand-header h1 {
-            font-size: 1.45rem;
-        }
-        .st-key-ingredient-detail-card {
-            padding: .8rem;
-            border-radius: 15px !important;
-        }
-        div[data-testid="stTabs"] [role="tablist"] {
-            flex-wrap: nowrap;
-            gap: .3rem;
-            overflow-x: auto;
-            overscroll-behavior-x: contain;
-            scrollbar-width: thin;
-        }
-        div[data-testid="stTabs"] button[data-baseweb="tab"] {
-            flex: 0 0 auto;
-            min-width: max-content;
-            height: auto;
-            min-height: 2.8rem;
-            padding: .5rem .75rem;
-            white-space: nowrap;
-            font-size: .86rem;
-        }
-        div[data-testid="stForm"] {
-            padding: 1rem .85rem .7rem;
-            border-radius: 15px;
-        }
-        div[data-testid="stTextInput"] input,
-        div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
-            min-height: 2.8rem;
-            font-size: 16px;
-        }
-        div[data-testid="stForm"] button,
-        [data-testid="stDialog"] button {
-            min-height: 2.8rem;
-        }
-        .st-key-shuffle_daily_wellness button {
-            min-height: 2.8rem;
-            padding: .35rem .65rem !important;
-        }
-        .st-key-ingredient-results [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap;
-        }
-        .st-key-ingredient-results [data-testid="stColumn"] {
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-        .st-key-ingredient-results button[kind="secondary"] {
-            padding: .45rem .8rem !important;
-        }
-        .st-key-calorie-metrics [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap;
-            gap: .5rem;
-        }
-        .st-key-calorie-metrics [data-testid="stColumn"] {
-            flex: 1 1 calc(50% - .5rem) !important;
-            min-width: calc(50% - .5rem) !important;
-        }
-        .st-key-calorie-metrics [data-testid="stMetric"] {
-            min-height: 5.2rem;
-            padding: .7rem;
-            border: 1px solid var(--wasabi-line);
-            border-radius: 12px;
-            background: #fff !important;
-        }
-        .st-key-calorie-metrics [data-testid="stMetricValue"],
-        .st-key-calorie-metrics [data-testid="stMetricValue"] *,
-        .st-key-calorie-metrics [data-testid="stMetricLabel"],
-        .st-key-calorie-metrics [data-testid="stMetricLabel"] * {
-            color: var(--wasabi-ink) !important;
-            -webkit-text-fill-color: var(--wasabi-ink) !important;
-        }
-        .st-key-calorie-metrics [data-testid="stMetricValue"] {
-            font-size: 1.35rem;
-            font-weight: 700;
-        }
-        .st-key-wellness-filters [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap;
-        }
-        .st-key-wellness-filters [data-testid="stColumn"] {
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-        .st-key-advice-food-links [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap;
-            gap: .35rem;
-        }
-        .st-key-advice-food-links [data-testid="stColumn"] {
-            flex: 1 1 45% !important;
-            min-width: 45% !important;
-        }
-        .st-key-advice-food-links button,
-        .st-key-daily-wellness-food-links button,
-        .st-key-related-wellness-food-links button,
-        .st-key-advice-recipe-links button {
-            min-height: 2.8rem;
-            padding: .35rem .25rem !important;
-        }
-        div[data-testid="stExpander"] {
-            border-radius: 13px;
-            background: rgba(255, 255, 252, .72);
-        }
-        div[data-testid="stDialog"] [role="dialog"] {
-            width: calc(100vw - 1rem);
-            max-width: calc(100vw - 1rem);
-            border-radius: 16px;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-try:
-    ingredients = load_ingredients()
-    wellness_entries, symptom_advice_entries = load_wellness_data()
-    recipe_entries = load_recipe_data()
-except (FileNotFoundError, ValueError) as error:
-    st.error(str(error))
-    st.stop()
-
-st.markdown(
-    """
-    <header class="brand-header">
-      <div class="brand-eyebrow">WASABI · FOOD &amp; WELLNESS</div>
-      <h1>わさびの薬膳辞書</h1>
-    </header>
-    """,
-    unsafe_allow_html=True,
-)
-
-wellness_ids = {entry["ID"] for entry in wellness_entries}
-if st.session_state.get("daily_wellness_id") not in wellness_ids:
-    st.session_state["daily_wellness_id"] = random.choice(wellness_entries)["ID"]
-
-daily_wellness = next(
-    entry for entry in wellness_entries
-    if entry["ID"] == st.session_state["daily_wellness_id"]
-)
-
-categories = sorted({item["分類"] for item in ingredients if item.get("分類")})
-if SYMPTOM_PAGE:
-    symptom_tab, wellness_tab, recipe_tab, search_tab = st.tabs([
-        "症状別で探す",
-        "養生・薬膳のヒント",
-        "薬膳レシピ",
-        "食材をさがす",
-    ])
-    knowledge_tab_position = 1
-elif WELLNESS_PAGE:
-    wellness_tab, symptom_tab, recipe_tab, search_tab = st.tabs([
-        "養生・薬膳のヒント",
-        "症状別で探す",
-        "薬膳レシピ",
-        "食材をさがす",
-    ])
-    knowledge_tab_position = 1
-elif RECIPE_PAGE:
-    recipe_tab, wellness_tab, symptom_tab, search_tab = st.tabs([
-        "薬膳レシピ",
-        "養生・薬膳のヒント",
-        "症状別で探す",
-        "食材をさがす",
-    ])
-    knowledge_tab_position = 1
-else:
-    search_tab, wellness_tab, symptom_tab, recipe_tab = st.tabs([
-        "食材をさがす",
-        "養生・薬膳のヒント",
-        "症状別で探す",
-        "薬膳レシピ",
-    ])
-    knowledge_tab_position = 2
-st.markdown(
-    f"""
-    <style>
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:nth-of-type({knowledge_tab_position}) {{
-        border: 2px solid #73885b !important;
-        border-radius: 10px 10px 0 0 !important;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-with search_tab:
-    st.markdown("#### 食材をさがす")
-    with st.form("ingredient_search"):
-        query = st.text_input(
-            "食材名を入力",
-            placeholder="食材名を入力（例：しょうが）",
-            label_visibility="collapsed",
-            help="食材名や別名から検索できます。複数の語句は空白や「、」で区切ると、すべてに一致する食材を探します。",
-            key="query_input",
-        )
-        st.caption("食材名・別名のみを検索します。")
-        search_col, clear_col = st.columns(2)
-        with search_col:
-            search_submitted = st.form_submit_button(
-                "検索する", type="primary", use_container_width=True
-            )
-        with clear_col:
-            with st.container(key="clear-search-button"):
-                st.form_submit_button(
-                    "クリア",
-                    type="secondary",
-                    on_click=clear_search,
-                    use_container_width=True,
-                )
-
-    st.caption(
-        "情報について：本サイトの内容はAIを活用して作成・整理しています。"
-        "各項目の根拠資料を個別に確認できていないため、出典は記載していません。"
-        "伝統的な薬膳・養生の考え方を紹介するもので、医療上の助言や診断・治療を目的とするものではありません。"
-    )
-
-    if search_submitted:
-        st.session_state["submitted_query"] = query
-        st.session_state["result_category_input"] = "すべて"
-        st.session_state["search_results_open"] = True
-        st.session_state["selected_ingredient_id"] = ""
-        st.session_state["result_page"] = 1
-
-    if st.session_state.get("search_results_open", False):
-        show_search_results_dialog(
-            ingredients,
-            st.session_state.get("submitted_query", ""),
-            categories,
-        )
-
-with recipe_tab:
-    st.button(
-        "← TOPへ戻る",
-        key="top-return-recipe",
-        on_click=navigate_to_page,
-        args=("search",),
-    )
-    st.markdown("### 🍲 薬膳レシピ")
-
-    recipe_categories = sorted({entry["分類"] for entry in recipe_entries})
-    if st.session_state.get("recipe_category_filter") not in recipe_categories:
-        st.session_state["recipe_category_filter"] = ""
-
-    st.markdown("#### 分類を選ぶ")
-    with st.container(key="recipe-category-buttons"):
-        columns = st.columns([len(category) for category in recipe_categories])
-        for index, (column, category) in enumerate(zip(columns, recipe_categories)):
-            with column:
-                if st.button(
-                    category,
-                    key=f"recipe-category-{index}",
-                    type=(
-                        "primary"
-                        if category == st.session_state["recipe_category_filter"]
-                        else "secondary"
-                    ),
-                ):
-                    st.session_state["recipe_category_filter"] = category
-                    st.session_state["selected_recipe_id"] = ""
-
-    recipe_category = st.session_state["recipe_category_filter"]
-    filtered_recipes = [
-        entry for entry in recipe_entries
-        if entry["分類"] == recipe_category
-    ]
-    if not recipe_category:
-        st.info("分類を選ぶと、該当するレシピが表示されます。")
-    else:
-        st.caption(f"表示：{len(filtered_recipes)}件")
-    if recipe_category and not filtered_recipes:
-        st.info("この分類にレシピがありません。別の分類を選んでください。")
-    if filtered_recipes:
-        clicked_recipe = None
-        st.markdown("#### レシピ名を選ぶ")
-        with st.container(key="recipe-name-buttons"):
-            for entry in filtered_recipes:
-                if st.button(
-                    entry["レシピ名"],
-                    key=f"recipe-name-{entry['レシピID']}",
-                    type="secondary",
-                ):
-                    clicked_recipe = entry
-        if clicked_recipe:
-            show_recipe_dialog(clicked_recipe)
-
-with symptom_tab:
-    st.button(
-        "← TOPへ戻る",
-        key="top-return-symptom",
-        on_click=navigate_to_page,
-        args=("search",),
-    )
-    st.markdown("### 症状別で探す")
-    st.write("気になる症状から、養生法やおすすめ食材・レシピを確認できます。")
-
-    symptom_names = [entry["症状名"] for entry in symptom_advice_entries]
-    if "symptom_advice_choice" not in st.session_state:
-        st.session_state["symptom_advice_choice"] = "選択してください"
-    st.caption("気になる症状を選ぶと、養生法やおすすめ食材が表示されます。")
-    with st.container(key="symptom-picker"):
-        selected_advice_name = st.selectbox(
-            "気になる症状を選ぶ",
-            ["選択してください", *symptom_names],
-            key="symptom_advice_choice",
-        )
-        if selected_advice_name != "選択してください":
-            st.markdown(f"**選択中：** {selected_advice_name}")
-    if selected_advice_name != "選択してください":
-        advice = next(
-            entry for entry in symptom_advice_entries
-            if entry["症状名"] == selected_advice_name
-        )
-        clicked_recommended_ingredient = None
-        clicked_related_recipe = None
-        with st.container(border=True):
-            st.markdown(f"##### {advice['症状名']}")
-            st.markdown("**東洋医学で考えられるタイプ**")
-            st.write(advice["主な原因・タイプ（東洋医学）"])
-            st.markdown("**養生法・アドバイス**")
-            st.write(advice["養生法・アドバイス"])
-            st.markdown("**おすすめの食材・生薬**")
-            recommendations = [
-                item.strip()
-                for item in re.split(r"[,，、]", advice["おすすめの食材・生薬"])
-                if item.strip()
-            ]
-            with st.container(key="advice-food-links"):
-                for row_start in range(0, len(recommendations), 4):
-                    columns = st.columns(4)
-                    for column_index, recommendation in enumerate(
-                        recommendations[row_start : row_start + 4]
-                    ):
-                        with columns[column_index]:
-                            index = row_start + column_index
-                            ingredient = find_recommended_ingredient(
-                                recommendation, ingredients
-                            )
-                            if ingredient:
-                                if st.button(
-                                    recommendation,
-                                    key=f"advice-food-{advice['症状ID']}-{index}",
-                                    type="secondary",
-                                    help="クリックして食材の詳細を表示",
-                                    use_container_width=False,
-                                ):
-                                    clicked_recommended_ingredient = ingredient
-                            else:
-                                st.caption(f"{recommendation}（詳細なし）")
-
-            related_recipes = find_related_recipes(selected_advice_name, recipe_entries)
-            if related_recipes:
-                st.markdown("**おすすめレシピ**")
-                with st.container(key="advice-recipe-links"):
-                    for recipe in related_recipes:
-                        with st.container(border=True):
-                            if st.button(
-                                recipe["レシピ名"],
-                                key=(
-                                    f"advice-recipe-{advice['症状ID']}-"
-                                    f"{recipe['レシピID']}"
-                                ),
-                                type="secondary",
-                                help="クリックしてレシピの詳細を表示",
-                            ):
-                                clicked_related_recipe = recipe
-                            st.caption(
-                                f"{recipe['分類']}・{recipe['調理時間・調理法']}"
-                            )
-
-            st.markdown("**避けたいこと**")
-            st.write(advice["避けたいこと"])
-        related_wellness_entries = find_related_wellness_entries(
-            selected_advice_name, wellness_entries
-        )
-        st.markdown("#### あわせて読みたいプチ養生")
-        if related_wellness_entries:
-            with st.container(key="related-wellness-food-links"):
-                for row_start in range(0, len(related_wellness_entries), 2):
-                    columns = st.columns(2)
-                    for column_index, entry in enumerate(
-                        related_wellness_entries[row_start : row_start + 2]
-                    ):
-                        with columns[column_index]:
-                            with st.container(border=True):
-                                st.markdown(f"##### {entry['タイトル']}")
-                                st.caption(f"{entry['対象季節']}・{entry['分類']}")
-                                st.write(entry["アドバイス本文"])
-                                st.markdown("**おすすめの食材：**")
-                                recommendations = [
-                                    item.strip()
-                                    for item in re.split(
-                                        r"[,，、]", entry["おすすめの食材"]
-                                    )
-                                    if item.strip()
-                                ]
-                                for row_start in range(0, len(recommendations), 4):
-                                    food_columns = st.columns(4)
-                                    for food_index, recommendation in enumerate(
-                                        recommendations[row_start : row_start + 4]
-                                    ):
-                                        with food_columns[food_index]:
-                                            index = row_start + food_index
-                                            ingredient = find_recommended_ingredient(
-                                                recommendation, ingredients
-                                            )
-                                            if ingredient:
-                                                if st.button(
-                                                    recommendation,
-                                                    key=(
-                                                        f"related-wellness-food-"
-                                                        f"{entry['ID']}-{index}"
-                                                    ),
-                                                    type="secondary",
-                                                    help="クリックして食材の詳細を表示",
-                                                ):
-                                                    clicked_recommended_ingredient = ingredient
-                                            else:
-                                                st.caption(
-                                                    f"{recommendation}（詳細なし）"
-                                                )
-                                st.caption(entry["ポイント・コツ"])
-        else:
-            st.info("選択した症状に関連するプチ養生はまだありません。")
-
-        if clicked_recommended_ingredient:
-            show_ingredient_dialog(clicked_recommended_ingredient)
-        elif clicked_related_recipe:
-            show_recipe_dialog(clicked_related_recipe)
-
-with wellness_tab:
-    st.button(
-        "← TOPへ戻る",
-        key="top-return-wellness",
-        on_click=navigate_to_page,
-        args=("search",),
-    )
-    st.markdown("### 🌿 養生・薬膳のヒント")
-    st.write("毎日の暮らしに取り入れやすい、東洋医学と薬膳の基本をまとめました。")
-
-    clicked_daily_ingredient = None
-    with st.container(border=True):
-        with st.container(key="daily-wellness-heading"):
-            title_col, shuffle_col = st.columns(2)
-            with title_col:
-                st.markdown("#### 今日のプチ養生")
-            with shuffle_col:
-                if st.button("シャッフル", key="shuffle_daily_wellness"):
-                    alternatives = [
-                        entry for entry in wellness_entries
-                        if entry["ID"] != daily_wellness["ID"]
-                    ]
-                    if alternatives:
-                        daily_wellness = random.choice(alternatives)
-                        st.session_state["daily_wellness_id"] = daily_wellness["ID"]
-
-        st.markdown(f"**{daily_wellness['タイトル']}**")
-        st.write(daily_wellness["アドバイス本文"])
-        st.markdown("**おすすめの食材：**")
-        recommendations = [
-            item.strip()
-            for item in re.split(r"[,，、]", daily_wellness["おすすめの食材"])
-            if item.strip()
-        ]
-        with st.container(key="daily-wellness-food-links"):
-            for row_start in range(0, len(recommendations), 4):
-                columns = st.columns(4)
-                for column_index, recommendation in enumerate(
-                    recommendations[row_start : row_start + 4]
-                ):
-                    with columns[column_index]:
-                        index = row_start + column_index
-                        ingredient = find_recommended_ingredient(
-                            recommendation, ingredients
-                        )
-                        if ingredient:
-                            if st.button(
-                                recommendation,
-                                key=f"daily-wellness-food-{daily_wellness['ID']}-{index}",
-                                type="secondary",
-                                help="クリックして食材の詳細を表示",
-                            ):
-                                clicked_daily_ingredient = ingredient
-                        else:
-                            st.caption(f"{recommendation}（詳細なし）")
-        st.caption(daily_wellness["ポイント・コツ"])
-
-    if clicked_daily_ingredient:
-        show_ingredient_dialog(clicked_daily_ingredient)
-
-    current_season = {
-        3: "春", 4: "春", 5: "春",
-        6: "梅雨", 7: "夏", 8: "夏",
-        9: "秋", 10: "秋", 11: "秋",
-        12: "冬", 1: "冬", 2: "冬",
-    }[date.today().month]
-    seasonal_entries = sorted(
-        (
-            entry for entry in wellness_entries
-            if entry["対象季節"] in (current_season, "通年")
-        ),
-        key=lambda entry: entry["対象季節"] != current_season,
-    )[:3]
-    st.markdown(f"#### 今の季節のおすすめ（{current_season}）")
-    for entry in seasonal_entries:
-        with st.expander(entry["タイトル"]):
-            st.write(entry["アドバイス本文"])
-            st.markdown(f"**おすすめの食材：** {entry['おすすめの食材']}")
-            st.caption(entry["ポイント・コツ"])
-
-    st.markdown("#### プチ養生一覧")
-    with st.container(key="wellness-filters"):
-        list_col, season_col = st.columns(2)
-        with list_col:
-            selected_wellness_category = st.selectbox(
-                "テーマ",
-                ["すべて", *sorted({entry["分類"] for entry in wellness_entries})],
-                key="wellness_category_filter",
-            )
-        with season_col:
-            selected_season = st.selectbox(
-                "季節",
-                ["すべて", *sorted(
-                    {entry["対象季節"] for entry in wellness_entries if entry["対象季節"] != "通年"}
-                ), "通年"],
-                key="wellness_season_filter",
-            )
-    wellness_query = st.text_input(
-        "悩み・体質から探す",
-        placeholder="例：乾燥、冷え、眠り",
-        key="wellness_query",
-    ).strip().casefold()
-    filtered_wellness_entries = [
-        entry for entry in wellness_entries
-        if (selected_wellness_category == "すべて" or entry["分類"] == selected_wellness_category)
-        and (selected_season == "すべて" or entry["対象季節"] in (selected_season, "通年"))
-        and (
-            not wellness_query
-            or wellness_query in entry["タイトル"].casefold()
-            or wellness_query in entry["対象の悩み・体質"].casefold()
-            or wellness_query in entry["アドバイス本文"].casefold()
-        )
-    ]
-    st.caption(f"表示：{len(filtered_wellness_entries)}件")
-    show_filtered_list = bool(
-        wellness_query
-        or selected_wellness_category != "すべて"
-        or selected_season != "すべて"
-    )
-    with st.expander(
-        f"ヒント一覧を見る（{len(filtered_wellness_entries)}件）",
-        expanded=show_filtered_list,
-    ):
-        if not filtered_wellness_entries:
-            st.info("条件に合う養生のヒントがありません。検索語や絞り込み条件を変えてください。")
-        for entry in filtered_wellness_entries:
-            with st.expander(f"{entry['タイトル']} · {entry['対象季節']}／{entry['分類']}"):
-                st.write(entry["アドバイス本文"])
-                st.markdown(f"**対象の悩み・体質：** {entry['対象の悩み・体質']}")
-                st.markdown(f"**おすすめの食材：** {entry['おすすめの食材']}")
-                st.markdown(f"**ポイント・コツ：** {entry['ポイント・コツ']}")
-
-    st.divider()
-    st.caption(
-        "ここでの内容は一般的な情報・セルフケア例で、体質診断や医療上の助言ではありません。"
-        "症状が強い、続く、または不安がある場合は医療機関にご相談ください。"
-    )
+        outline: 2px solid var(--wasabi-leaf)
